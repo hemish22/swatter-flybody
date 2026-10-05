@@ -1,8 +1,8 @@
 # Browser engine: contract, export format, and reference
 
-Status: contract, exporter and a Python reference engine exist and agree on 50
-fixed stimuli. The Rust/WASM and WebGPU engine does not exist yet (no Rust or Node
-toolchain on the DGX host).
+Status: contract, exporter, a Python reference engine and the Rust/WASM engine
+(`engine/`, 31 KiB, no dependencies) exist and all agree on 50 fixed stimuli. No
+browser has run it yet.
 
 ## Contract
 
@@ -51,14 +51,39 @@ first-spike times agree to within one step. Measured: **all 46 trials with a GF 
 agree exactly** (0.0 ms difference), and a 2% change to all weights moves 35 of 50 trials
 outside one step, so the test is sensitive. The test skips when `web/brain` is absent.
 
-The Rust/WASM engine's test is the same file's logic against the same `parity.json`;
-leaderboard verification compares outcomes (mode, heading side), not raw floats, as the
-plan's determinism note says.
+## The Rust/WASM engine
+
+`engine/src/lib.rs`: C ABI (`alloc`, `init`, `reset`, `frame`, `finish`, spike readout), no
+wasm-bindgen and no crates, so any host can load it. Arithmetic mirrors the numpy
+reference step for step. Build and install:
+
+    cd engine && cargo build --release --target wasm32-unknown-unknown
+    cp target/wasm32-unknown-unknown/release/swatter_engine.wasm ../web/brain/engine.wasm
+
+`offline/wasm_host.py` is the host glue (copy arrays in, call `init`, feed frames),
+run under wasmtime; the browser glue is the same calls. `tests/test_engine_wasm.py`
+checks, on `web/brain/parity.json`:
+
+- all 50 stimuli: mode, heading side and first-spike times match the dense torch
+  reference to within one step;
+- one trial's whole spike train is **identical** to the numpy engine's;
+- a second run on the same instance reproduces the first (reset is complete).
+
+Plus four native `cargo test`s on a two-neuron network.
+
+**Speed** (wasmtime on one server core, not a laptop browser): a 400 ms trial takes a
+median 21 ms (p95 29 ms), 19x faster than real time, and the worst single 5 ms frame costs
+0.29 ms against the 5 ms budget. A mid-range laptop browser is not measured; at several
+times slower it would still have a wide margin. **WebGPU is therefore not needed**: the
+circuit is 495 neurons and 42k edges, and the plan's WebGPU fast path would add
+cross-GPU float differences for no speed the game uses. The plan's "WASM CPU fallback"
+is the engine.
 
 ## Not done
 
-- The Rust/WASM and WebGPU engine itself, and its speed measurement ("faster than real
-  time on a mid-range laptop"). Size of the work: 495 neurons, 42k edges, 2,000 steps
-  per 400 ms trial, so well under 100M edge-operations per trial.
+- Nothing in a browser has run: the TypeScript glue and the in-browser parity run
+  against `parity.json` are still to do (needs Node or a browser; neither is installed on
+  this host). The leaderboard's Node re-sim has the same dependency.
 - Parameters are provisional (Brian2 check, criterion 3 decision).
-- Nothing in the browser has run yet.
+- The engine runs the LIF circuit only. Frame generation from the game's world (swatter
+  position and size to `(rate, x, y)` per eye) is the game's job and is not written.
