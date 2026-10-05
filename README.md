@@ -30,7 +30,7 @@ comes from the connectome-wired LIF circuit (`offline/lif.py`,
 expanding trial and no control, at 31 of 60 parameter settings.
 
 Held-out fit done, provisional (`docs/lif_fit.md`); criterion 3 fails and criterion 4 is met
-(`docs/heading.md`). Validation v1 done (`docs/validation.md`). Export and a Python reference engine done, parity on 50 stimuli (`docs/engine.md`). The Rust/WASM engine (`engine/`) is built and matches the reference on all 50 parity stimuli, 19x faster than real time under wasmtime; not run in a browser yet. Not started: and all of `engine/`, `web/`, `server/`.
+(`docs/heading.md`). Validation v1 done (`docs/validation.md`). Export and a Python reference engine done, parity on 50 stimuli (`docs/engine.md`). The Rust/WASM engine (`engine/`) is built and matches the reference on all 50 parity stimuli, 19x faster than real time under wasmtime and 59x in Node, where the TypeScript glue passes the same parity set (`web/`); not run in a browser yet. Not started: and all of `engine/`, `web/`, `server/`.
 
 ## Heavy work runs on the DGX
 

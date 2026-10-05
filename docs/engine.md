@@ -1,8 +1,9 @@
 # Browser engine: contract, export format, and reference
 
 Status: contract, exporter, a Python reference engine and the Rust/WASM engine
-(`engine/`, 31 KiB, no dependencies) exist and all agree on 50 fixed stimuli. No
-browser has run it yet.
+(`engine/`, 31 KiB, no dependencies) exist and all agree on 50 fixed stimuli, and the
+TypeScript glue (`web/engine/brain.ts`) passes the same parity set under Node. No browser
+has run it yet.
 
 ## Contract
 
@@ -79,11 +80,24 @@ circuit is 495 neurons and 42k edges, and the plan's WebGPU fast path would add
 cross-GPU float differences for no speed the game uses. The plan's "WASM CPU fallback"
 is the engine.
 
+## TypeScript glue and Node parity
+
+`web/engine/brain.ts` is the glue the game and the leaderboard re-sim share: it takes bytes
+(manifest, `brain.bin`, `engine.wasm`), not paths, so it runs unchanged in a browser and in
+Node, and uses only erasable TypeScript so Node runs it without a build step. It also
+computes mode and heading from the spikes with the plan's fixed rules.
+`web/engine/parity.test.ts` (`cd web && PATH=$HOME/.local/node/bin:$PATH npm test`) checks:
+
+- all 50 parity stimuli: mode, heading side and first-spike times match the Python
+  reference to within one step;
+- a rerun on the same instance is identical, and frame-by-frame streaming equals `run()`;
+- speed: a 400 ms trial takes 6.7 ms in Node/V8 (59x real time); the same WASM took 21 ms
+  under wasmtime above.
+
 ## Not done
 
-- Nothing in a browser has run: the TypeScript glue and the in-browser parity run
-  against `parity.json` are still to do (needs Node or a browser; neither is installed on
-  this host). The leaderboard's Node re-sim has the same dependency.
+- Nothing in a browser has run: the in-browser parity run and the game's frame generation are
+  still to do. Node here is a user-space install (`~/.local/node`), Rust is in `~/.cargo`.
 - Parameters are provisional (Brian2 check, criterion 3 decision).
 - The engine runs the LIF circuit only. Frame generation from the game's world (swatter
   position and size to `(rate, x, y)` per eye) is the game's job and is not written.
