@@ -13,9 +13,15 @@ against), written for batches of trials on a GPU:
     v0 = v_rst = -52 mV, v_th = -45 mV, t_mbr = 20 ms, tau = 5 ms,
     t_rfc = 2.2 ms, t_dly = 1.8 ms, w_syn = 0.275 mV per synapse.
 
-The constants are from memory of that paper and NOT yet cross-checked against
-its Brian2 code (the plan's "LIF cross-check" row). Until that is done this is
-"a LIF model in the style of Shiu et al.", and the docs say so.
+Constants checked against the paper's Methods text (PMC11446845) on 2026-10-05:
+equations and every value above match (t_mbr = R_mbr x C_mbr = 10 kOhm cm^2 x
+2 uF/cm^2 = 20 ms). Still NOT checked against its Brian2 code (the plan's "LIF
+cross-check" row), so integration-scheme details are unverified. Two known
+differences: the paper assigns a neuron's sign by the majority of its predicted
+presynaptic sites, this graph by the neuron's consensus transmitter; and the
+paper lists only GABA and glutamate as inhibitory, this code also counts
+histamine (no histaminergic neuron is in the 495-neuron graph, so it changes
+nothing here).
 
 Scale to keep in mind: one spike's peak PSP is ~0.043 mV per synapse (0.275 mV
 conductance jump x 0.157, the peak of the 5 ms / 20 ms double exponential), so

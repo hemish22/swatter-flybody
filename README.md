@@ -29,7 +29,7 @@ comes from the connectome-wired LIF circuit (`offline/lif.py`,
 `offline/loom_sweep.py`). Under that drive the giant fiber spikes for every
 expanding trial and no control, at 31 of 60 parameter settings.
 
-Not started: the Week 2 fit with a held-out set, criteria 3 and 4 (takeoff mode,
+Held-out fit done, provisional (`docs/lif_fit.md`). Not started: criteria 3 and 4 (takeoff mode,
 heading), the export (`export.py`), and all of `engine/`, `web/`, `server/`.
 
 ## Heavy work runs on the DGX

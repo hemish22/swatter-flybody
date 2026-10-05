@@ -89,14 +89,14 @@ before claiming it.
 
 ## Caveats, all of which bind
 
-- **In-sample.** The best-of-60 above is chosen on the same 128 trials it is
-  scored on. Week 2's frozen parameters need a held-out set (other azimuths and
-  seeds). The plateau (31 of 60) says the result is not a knife edge; it does not
-  replace the held-out check.
+- **In-sample (addressed in `docs/lif_fit.md`).** The best-of-60 above is chosen on
+  the same 128 trials it is scored on. The Week 2 fit selects on train and scores
+  on held-out r/v and azimuths: margin +1.00 on test. It also shows criterion 1
+  barely constrains the parameters (206 of 378 settings perfect on train).
 - **Selectivity under the angular drive is constructed.** See the decision above.
-- **The LIF constants are from memory** of Shiu et al. 2024 and have not been
-  checked against its Brian2 code, the plan's "LIF cross-check" row. Until then
-  call this "a LIF model in the style of Shiu et al.". One spike's peak PSP is
+- **The LIF constants match the Methods text** of Shiu et al. 2024 (checked
+  2026-10-05) but have not been checked against its Brian2 code, the plan's "LIF
+  cross-check" row. Until then call this "a LIF model in the style of Shiu et al.". One spike's peak PSP is
   ~0.043 mV per synapse, so crossing the 7 mV gap takes ~162 synapses on one spike;
   the giant fiber fires on many LPLC2 spikes together.
 - **Monocular.** The right eye is stimulated; the 94 left LPLC2 neurons are in
