@@ -54,6 +54,10 @@ TYPES = ("T4a", "T4b", "T4c", "T4d", "T5a", "T5b", "T5c", "T5d")
 # T4 sees ON edges, T5 OFF edges.
 POLARITY = {t: "on" if t.startswith("T4") else "off" for t in TYPES}
 
+# Readouts, in the order they were added. "lpi:1" is the one the verdict is read at.
+MODES = ("linear", "and", "lpi:1", "lpi:0.5", "lpi:2", "lpi:4")
+TRANSLATION_SPEEDS_DEG_S = (25.0, 50.0, 100.0, 200.0)  # 200 is loom.py's control
+
 CALIBRATION_PHIS = np.arange(0, 360, 45)
 CALIBRATION_SPEED_DEG_S = 150.0
 
@@ -114,6 +118,11 @@ class Lplc2Drive:
             raise ValueError(f"type order in {npz} is {tuple(z['types'])}, expected {TYPES}")
         self.weights = z["weights"].astype(np.float32)  # (n_lplc2, 8, 721)
         self.bodies = z["bodies"]
+        self.has_lpi = "lpi_t4t5" in z
+        if self.has_lpi:
+            self.lpi_in = z["lpi_t4t5"].astype(np.float32)  # (n_lpi, 8, 721)
+            self.lpi_total = np.maximum(z["lpi_t4t5_total"].astype(np.float32), 1.0)
+            self.lpi_out = z["lpi_to_lplc2"].astype(np.float32)  # (n_lplc2, n_lpi)
 
     def groups(self, act: dict[str, np.ndarray]) -> np.ndarray:
         """(B, T, n_lplc2, 4) drive per direction group a-d, T4 and T5 of a group pooled."""
@@ -130,12 +139,28 @@ class Lplc2Drive:
         are driven. That is the coincidence LPLC2 needs from a looming object
         (outward motion on every side) and a translating one cannot supply.
         It is a second readout of the same wiring, not a different wiring.
+
+        mode "lpi:<gain>": the linear drive minus the inhibitory two-hop path.
+        Each LPi cell carries the mean rise of its T4/T5 input (its synapse-
+        weighted rise over its TOTAL T4/T5 input, so inputs outside the lattice
+        count as silent), and each of its synapses onto an LPLC2 neuron subtracts
+        that, times `gain`, in the same synapse x rise units as the excitation.
+        Gain 1 means an inhibitory synapse is worth an excitatory one. It is not
+        fitted: a per-synapse efficacy for glutamate against acetylcholine is not
+        in the connectome, so the gain is reported as a sweep and the verdict is
+        read at gain 1.
         """
-        g = self.groups(act)
         if mode == "linear":
-            return g.sum(axis=-1)
+            return self.groups(act).sum(axis=-1)
         if mode == "and":
-            return np.prod(np.clip(g, 0.0, None), axis=-1) ** 0.25
+            return np.prod(np.clip(self.groups(act), 0.0, None), axis=-1) ** 0.25
+        if mode.startswith("lpi:"):
+            gain = float(mode.split(":")[1])
+            rise = np.stack([np.clip(act[t] - act[t][:, :1], 0.0, None) for t in TYPES], axis=2)
+            exc = np.einsum("btkc,ikc->bti", rise, self.weights)
+            lpi_act = np.einsum("btkc,jkc->btj", rise, self.lpi_in) / self.lpi_total
+            inh = np.einsum("btj,ij->bti", lpi_act, self.lpi_out)
+            return np.clip(exc - gain * inh, 0.0, None)
         raise ValueError(mode)
 
 
@@ -157,7 +182,7 @@ def run_suite(lobe, eye: Eye, readout: Lplc2Drive, rvs=RV_MS, azimuths=None, dur
     movies = np.stack([render_loom(l, eye) for l in looms])
     act = lobe.run(movies, record=TYPES, background="first_frame", chunk=32)
     # most-driven LPLC2 neuron at each time, (N, T), per readout mode
-    peaks = {m: readout(act, m).max(axis=2) for m in ("linear", "and")}
+    peaks = {m: readout(act, m).max(axis=2) for m in MODES if readout.has_lpi or not m.startswith("lpi")}
     return looms, peaks
 
 
@@ -190,6 +215,26 @@ def summarise(looms, peak, dt_ms: float) -> dict:
         row["trials_crossing"] = f"{len(crossings)}/{len([1 for l in looms if l.kind == 'expanding' and l.rv_ms == rv])}"
         rows.append(row)
     return {"threshold": threshold, "by_rv": rows}
+
+
+def translation_sweep(lobe, eye: Eye, readout: Lplc2Drive, modes, duration_ms=400.0) -> dict:
+    """Median peak drive of a translating disc at several speeds, per readout.
+
+    Diagnostic only. loom.py's control (200 deg/s) stays the pass/fail one; this
+    shows how far down in speed the translating disc has to go before it stops
+    out-driving the loom, so the choice of control speed can be judged with the
+    number in front of you instead of being tuned to the table.
+    """
+    azimuths = tuple(float(a) for a in np.linspace(0, 360, 8, endpoint=False))
+    dt_ms = lobe.dt_s * 1000.0
+    out = {}
+    for speed in TRANSLATION_SPEEDS_DEG_S:
+        arc = speed * duration_ms / 1000.0 / 2.0  # half the total sweep
+        looms = [Loom(kind="translating", rv_ms=20.0, azimuth_deg=az, duration_ms=duration_ms, dt_ms=dt_ms) for az in azimuths]
+        movies = np.stack([render_loom(l, eye, translate_arc_deg=arc) for l in looms])
+        act = lobe.run(movies, record=TYPES, background="first_frame")
+        out[speed] = {m: float(np.median(readout(act, m).max(axis=2).max(axis=1))) for m in modes}
+    return out
 
 
 def dt_check(lobe_cls, eye: Eye, member: int) -> dict:
@@ -254,6 +299,15 @@ def main() -> int:
             ms, deg = r["threshold_crossing_ms_median"], r["angular_size_at_crossing_deg_median"]
             print(f"{r['rv_ms']:5.0f} | {cells} | {r['selectivity_expanding_over_best_control']:18.2f} | "
                   f"{ms}, {None if deg is None else round(deg, 1)}, {r['trials_crossing']}")
+
+    result["translation_speed"] = translation_sweep(lobe, eye, readout, list(peaks))
+    banner("diagnostic: translating-disc peak drive vs speed (loom.py's control is 200 deg/s); expanding for reference")
+    print(f"{'deg/s':>6} | " + " ".join(f"{m:>9}" for m in peaks))
+    for speed, row in result["translation_speed"].items():
+        print(f"{speed:6.0f} | " + " ".join(f"{row[m]:9.3g}" for m in peaks))
+    for rv in (20.0, 40.0):
+        ref = next(r for r in result["linear"]["by_rv"] if r["rv_ms"] == rv)
+        print(f"expand r/v={rv:<4.0f}| " + " ".join(f"{next(r for r in result[m]['by_rv'] if r['rv_ms'] == rv)['expanding_peak_median']:9.3g}" for m in peaks))
 
     if args.dt_check:
         result["dt_check"] = dt_check(OpticLobe, eye, args.member)

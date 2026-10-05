@@ -10,7 +10,7 @@ Week 0's flyvis item was "port running". What exists now:
 | Eye: 721 real columns, loom rendered in 2-D | `offline/eye.py` | done, 18 local tests |
 | Optic lobe behind one interface | `offline/optic_wrapper.py` | `flyvis` backend done; `malecns` backend not built (see below) |
 | MaleCNS columns, lattice orientation, LPLC2 ← T4/T5 | `offline/malecns_ol.py` | done, both eyes |
-| Gate experiment | `offline/optic_gate.py` | done; **verdict below is Partial, not Go** |
+| Gate experiment | `offline/optic_gate.py`, `offline/ensemble_dsi.py` | done; **verdict below is Partial, not Go** |
 
 ## The result that matters
 
@@ -64,6 +64,42 @@ disc through 80° in 400 ms (200°/s), which is a near-optimal stimulus for
 T4/T5. That is a choice of the control's speed, not a fact about the fly, and
 whether 200°/s is the right "lateral translation" is the user's call, not
 something to tune until the table looks right.
+
+### Two follow-ups that did not move it
+
+**LPi inhibition.** MaleCNS has the inhibitory two-hop path T4/T5 → LPi → LPLC2
+(375 right LPi cells, all predicted glutamate or GABA; 9,061 synapses onto the
+91 LPLC2 neurons against 63,742 excitatory T4/T5 synapses; 464,852 T4/T5
+synapses onto LPi). Each LPi synapse subtracts the mean rise of its cell's T4/T5
+input. Expanding ÷ best control, r/v 10/20/40/80:
+
+| LPi gain | ratio |
+| ---: | --- |
+| 0 (linear) | 0.72 / 0.77 / 0.90 / 0.94 |
+| 0.5 | 0.72 / 0.78 / 0.91 / 0.94 |
+| **1 (verdict)** | 0.71 / 0.80 / 0.91 / 0.95 |
+| 2 | 0.70 / 0.80 / 0.93 / 0.96 |
+| 4 | 0.68 / 0.80 / 0.97 / 0.97 |
+
+Gain is not fitted (the glutamate-versus-acetylcholine efficacy per synapse is
+not in the connectome); the sweep is sensitivity, and the verdict is read at 1.
+LPi cost translating and expanding about the same, because the same T4/T5
+motion feeds both the excitation and the inhibition. The inhibitory synapses
+are only 14% of the excitatory count.
+
+**Translating speed.** `loom.py`'s control is 200°/s. Peak drive of the
+translating disc against its speed (linear readout), with expanding for scale:
+
+| Translating (°/s) | 25 | 50 | 100 | 200 | expanding r/v = 20 | expanding r/v = 40 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| peak drive | 66 | 91.5 | 113 | 112 | 85.9 | 217 |
+
+A 14° disc that moves only 10° in 400 ms already drives LPLC2 at 77% of an
+r/v = 20 loom, because that loom's edges also travel ~11° in the same time. So
+200°/s is not what is hurting: loom and a slow drift carry comparable motion
+energy and the wiring cannot tell them apart. The control stays at 200°/s, the
+plan's lateral-translation test; the sweep is there so the choice can be judged
+rather than tuned.
 
 ### What the Partial verdict does and does not say
 
@@ -204,8 +240,34 @@ motion field and is probably the main thing a real LPLC2 does not read.
   it. Run the dynamics on flyvis's own wiring until a reason to switch exists.
 - **LC4.** Its inputs are lobula types flyvis does not model.
 - **LPi / lobula-plate inhibition** and the LIF stage itself.
-- **Ensemble.** Member 000 only; the best of 50 by validation loss, so
-  the ensemble spread is not in these numbers.
+- **Other ensemble members.** Member 000 is the right one: ranked by T4/T5
+  direction selectivity under flyvis's own moving-edge protocol (a criterion
+  that never looked at the loom gate), it is far ahead. Of 18 members measured
+  (`docs/ensemble_dsi.json`, `offline/ensemble_dsi.py`), 000 has a minimum DSI of
+  0.14 and a mean of 0.56; no other member has a minimum above 0.04 or a mean
+  above 0.41, and most have several types near zero. So the weak T4d is the best
+  this ensemble offers, and the translating result is not a bad-member artefact.
+  Ensemble spread of the gate itself is still not measured.
+
+## Decisions taken at the gate
+
+Delegated by the user on 2026-10-05, made for these reasons:
+
+1. **Verdict: Partial.** Receding and dimming are handled; translating is not,
+   under four independent readouts (hand template, linear, four-direction AND,
+   LPi-inhibited), the best optic-lobe member, and any LPi gain from 0 to 4.
+2. **The translating control stays at 200°/s** and stays pass/fail. The speed
+   sweep shows slowing it does not rescue the result, so there is nothing to
+   gain by touching it.
+3. **No `malecns` dynamics backend.** The needed MaleCNS content (LPLC2 and LPi
+   wiring) is in; the reference port's own dynamics are weaker than flyvis's.
+4. **Next stage uses the Partial path the plan names**, with the limitation
+   written down rather than papered over: the LIF stage takes LPLC2 input from
+   this T4/T5 drive, and `docs/validation.md` must state that translation is not
+   separated by the wiring and what the game does about it. The honest game-level
+   consequence is that a swatter drifting sideways at hover height can spook the
+   fly; that is part of the stimulus the player controls (the plan's hover phase
+   already says approach alone can spook it), and the post-round card can show it.
 
 ## Reproducing
 

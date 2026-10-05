@@ -292,6 +292,52 @@ def lplc2_inputs(n: pd.DataFrame, raw: Path) -> tuple[dict, dict]:
     return {"bodies": bodies, "weights": w, "types": np.array(MOTION)}, info
 
 
+def lpi_pathway(n: pd.DataFrame, raw: Path, lplc2_bodies: np.ndarray) -> tuple[dict, dict]:
+    """The inhibitory two-hop path T4/T5 -> LPi -> LPLC2, in flyvis columns.
+
+    LPi are lobula-plate intrinsic neurons, all predicted glutamate or GABA
+    (inhibitory in insects). They are wide-field, so what is kept is not a
+    position for them but their input and output synapse counts:
+
+        t4t5_to_lpi[j, k, c]   synapses LPi cell j gets from T4/T5 type k, column c
+        lpi_t4t5_total[j]      ALL its T4/T5 input, including columns outside the
+                               721-column hexagon, so a cell mostly fed from
+                               outside the lattice is not read as fully driven
+        lpi_to_lplc2[i, j]     synapses from LPi j onto LPLC2 neuron i
+    """
+    lpi = n[n["type"].str.startswith("LPi", na=False)]
+    mot_all = n[n["type"].isin(MOTION)]
+    mot = mot_all[mot_all["in_lattice"]]
+    bodies = np.concatenate([lpi["bodyId"].to_numpy(), mot_all["bodyId"].to_numpy(), lplc2_bodies])
+    edges = load_edges(raw, bodies, 1)
+    e_in = edges[edges["body_pre"].isin(mot_all["bodyId"]) & edges["body_post"].isin(lpi["bodyId"])]
+    e_out = edges[edges["body_pre"].isin(lpi["bodyId"]) & edges["body_post"].isin(lplc2_bodies)]
+
+    j_of = {int(b): i for i, b in enumerate(lpi["bodyId"])}
+    i_of = {int(b): i for i, b in enumerate(lplc2_bodies)}
+    col = column_index()
+    pre = mot.assign(col=[col[(int(u), int(v))] for u, v in zip(mot["u"], mot["v"])]).set_index("bodyId")
+    type_index = {t: i for i, t in enumerate(MOTION)}
+    w_in = np.zeros((len(lpi), len(MOTION), len(col)), dtype=np.float32)
+    total = np.zeros(len(lpi), dtype=np.float32)
+    for r in e_in.itertuples():
+        total[j_of[int(r.body_post)]] += r.weight
+        if r.body_pre in pre.index:
+            w_in[j_of[int(r.body_post)], type_index[pre.at[r.body_pre, "type"]], pre.at[r.body_pre, "col"]] += r.weight
+    w_out = np.zeros((len(lplc2_bodies), len(lpi)), dtype=np.float32)
+    for r in e_out.itertuples():
+        w_out[i_of[int(r.body_post)], j_of[int(r.body_pre)]] += r.weight
+    info = {
+        "n_lpi": int(len(lpi)),
+        "lpi_to_lplc2_synapses": int(w_out.sum()),
+        "t4t5_to_lpi_synapses_total": int(total.sum()),
+        "t4t5_to_lpi_inside_lattice": int(w_in.sum()),
+        "lpi_types_reaching_lplc2": lpi.assign(w=lpi["bodyId"].map(dict(zip(lpi["bodyId"], w_out.sum(axis=0)))))
+        .groupby("type")["w"].sum().loc[lambda x: x > 0].astype(int).sort_values(ascending=False).to_dict(),
+    }
+    return {"lpi_t4t5": w_in, "lpi_t4t5_total": total, "lpi_to_lplc2": w_out}, info
+
+
 def radial_check(inp: dict) -> dict:
     """Is the wiring radial in this lattice orientation?
 
@@ -371,7 +417,10 @@ def main() -> int:
     banner("LPLC2 <- T4/T5")
     inp, info = lplc2_inputs(n, raw)
     print(json.dumps(info, indent=2))
-    rad = radial_check(inp)
+    lpi, lpi_info = lpi_pathway(n, raw, inp["bodies"])
+    inp.update(lpi)
+    print("LPi pathway:", json.dumps(lpi_info, indent=2))
+    rad = radial_check({k: inp[k] for k in ("weights", "types")})
     print("channel input centroid relative to the LPLC2 receptive-field centre (eye-plane degrees):")
     for t, r in rad.items():
         print(f"  {t}: offset {r['mean_offset_deg']}  share {r['weight_share']:.2f}")
@@ -383,7 +432,7 @@ def main() -> int:
         json.dumps(
             {"holdout": holdout, "orientation": {"chosen": list(best), "table_top": table[:6], "worst": table[-1],
                                                  "ds_centroids": ds_report}, "lattice": lat,
-             "lplc2": info, "radial_check": rad},
+             "lplc2": info, "lpi": lpi_info, "radial_check": rad},
             indent=2,
             default=str,
         )

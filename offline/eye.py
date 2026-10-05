@@ -168,7 +168,7 @@ def unit_vector(ecc_deg: np.ndarray | float, phi_deg: np.ndarray | float) -> np.
 LAB_ECCENTRICITY_DEG = 40.0
 
 
-def render_loom(loom, eye: Eye, ecc_deg: float = LAB_ECCENTRICITY_DEG) -> np.ndarray:
+def render_loom(loom, eye: Eye, ecc_deg: float = LAB_ECCENTRICITY_DEG, translate_arc_deg: float = 40.0) -> np.ndarray:
     """(n_steps, n_columns) luminance of a `loom.Loom` on this eye.
 
     The loom's `azimuth_deg` is the position angle of the disc around the
@@ -186,9 +186,10 @@ def render_loom(loom, eye: Eye, ecc_deg: float = LAB_ECCENTRICITY_DEG) -> np.nda
     n = theta.size
     phi = np.full(n, float(loom.azimuth_deg))
     if loom.kind == "translating":
-        # loom.py sweeps +-40 degrees of arc; at this eccentricity that is a
-        # position-angle change of 40 / sin(ecc).
-        sweep = np.linspace(-1.0, 1.0, n) * 40.0 / math.sin(math.radians(ecc_deg))
+        # loom.py sweeps +-40 degrees of arc (`translate_arc_deg`, the default);
+        # at this eccentricity that is a position-angle change of arc / sin(ecc).
+        # The speed diagnostic in optic_gate.py varies it.
+        sweep = np.linspace(-1.0, 1.0, n) * translate_arc_deg / math.sin(math.radians(ecc_deg))
         phi = phi + sweep
     centre = unit_vector(ecc_deg, phi)
     covered = eye.coverage(centre, radius)
