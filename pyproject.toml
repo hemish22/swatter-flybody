@@ -1,0 +1,24 @@
+[project]
+name = "swatter"
+version = "0.1.0"
+description = "A browser game where the fruit fly's escape reflex is the opponent"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "scipy>=1.13",
+  "pyarrow>=17",
+  "pandas>=2.2",
+  "matplotlib>=3.8",
+  "torch>=2.4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["offline"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"

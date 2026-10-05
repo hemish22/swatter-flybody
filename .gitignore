@@ -1,0 +1,19 @@
+# Big connectome tables: downloaded on the DGX, never in git (1.1 GB, and the
+# bucket is public + checksummed so there is nothing to gain by versioning them).
+data/raw/
+
+# Derived artefacts. Small enough to rebuild, and the DGX is the source of truth.
+data/subgraph/
+data/sweeps/
+docs/figures/
+docs/loom_suite.json
+logs/
+
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+node_modules/
+dist/
+target/

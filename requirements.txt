@@ -1,0 +1,8 @@
+# Offline brain build. Deliberately small: torch is here for the LIF stage and
+# the ablations, and the A100 does that work on the DGX, not locally.
+numpy>=2.0
+scipy>=1.13
+pyarrow>=17
+pandas>=2.2
+matplotlib>=3.8
+torch>=2.4
