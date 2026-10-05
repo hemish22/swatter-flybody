@@ -1,5 +1,10 @@
 # Optic lobe — Week 1 status
 
+> The gate decision that followed from this is in [`week1_gate.md`](week1_gate.md): the
+> LIF half closed the question (no setting of the fitted parameters rescues the
+> optic-lobe path), so the plan's No-go rescope was taken. Item 4 under
+> "Decisions taken at the gate" below was the plan at the time and is superseded.
+
 Dates: Oct 5, 2026. Everything here was run on the DGX (`dgxa100`), flyvis
 ensemble member `flow/0000/000`, GPU 7 for the sweeps.
 

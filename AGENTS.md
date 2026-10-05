@@ -20,23 +20,26 @@ generation, `make test`, reading the manifest, byte-compiling.
 
 ## State
 
-Week 0 done. Week 1 is the go/no-go gate. The optic lobe half of the gate has
-been run: **Partial, not Go**. Read `docs/optic_lobe.md` first (it supersedes
-the "what is left" list in `docs/week0_status.md`), then `docs/week0_status.md`
-for the measured neuron and synapse counts and the escape DN identities.
+Week 0 done. **Week 1 gate decided: the plan's No-go rescope** (`docs/week1_gate.md`
+first, then `docs/optic_lobe.md`). The optic lobe cannot separate translating
+discs from looming ones under any setting of the three fitted LIF parameters, so
+LPLC2 is driven by the stimulus's angular growth and the escape decision comes
+from the connectome-wired LIF circuit. The UI and `docs/validation.md` must say
+the looming detection is a model component. `docs/week0_status.md` still has the
+measured counts and DN identities.
 
-Built: `offline/eye.py` (721-column lattice, 2-D loom renderer),
-`offline/optic_wrapper.py` (flyvis behind `OpticLobe`), `offline/malecns_ol.py`
-(MaleCNS columns, lattice orientation, LPLC2 <- T4/T5), `offline/optic_gate.py`.
-Not started, in dependency order: `lif.py`, `loom_sweep.py`, `export.py`, then
-`engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately
-not built (reasons in `docs/optic_lobe.md`).
+Built: `eye.py`, `optic_wrapper.py`, `malecns_ol.py`, `optic_gate.py` (optic lobe,
+kept offline), `escape_graph.py`, `lif.py`, `loom_sweep.py`, `lif_scan.py`.
+Not started: Week 2 fit with a held-out set, criteria 3 and 4, `export.py`,
+`engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately not
+built (`docs/optic_lobe.md`).
 
 **This host, `dgxa100`, is the DGX.** No ssh hop and no `scripts/dgx.sh`: run
 jobs directly with `SWATTER_REMOTE=1 SWATTER_DATA=data .venv/bin/python
 offline/<job>.py`. That variable is the repo's own DGX marker, not a bypass. The
 GPUs are shared: check `nvidia-smi` and pick a free one with
-`CUDA_VISIBLE_DEVICES`, and cap `torch.set_num_threads` in anything CPU-side.
+`CUDA_VISIBLE_DEVICES` (GPU jobs refuse to start without one), and cap
+`torch.set_num_threads` in anything CPU-side.
 
 ## Conventions
 
