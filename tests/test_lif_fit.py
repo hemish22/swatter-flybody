@@ -16,6 +16,7 @@ from lif_fit import (  # noqa: E402
 )
 from loom import RV_MS  # noqa: E402
 from loom_sweep import build_trials  # noqa: E402
+from takeoff import classify  # noqa: E402
 
 SHAPE = (len(GAIN_SCALES), len(WEIGHT_SCALES), len(THRESHOLDS))
 
@@ -54,8 +55,9 @@ class TestSelect(unittest.TestCase):
 
 
 class TestScore(unittest.TestCase):
-    def row(self, kind, rv, spikes, t=None, theta=None):
-        return {"kind": kind, "rv_ms": rv, "gf_spikes": spikes, "gf_t_ms": t, "gf_theta_deg": theta}
+    def row(self, kind, rv, spikes, t=None, theta=None, par=None):
+        return {"kind": kind, "rv_ms": rv, "gf_spikes": spikes, "gf_t_ms": t, "gf_theta_deg": theta,
+                "parallel_t_ms": par, "mode": classify(t, par)}
 
     def test_margin_is_expanding_minus_strongest_control(self):
         rows = [self.row("expanding", 20.0, 1, 100.0, 10.0), self.row("expanding", 20.0, 1, 110.0, 12.0),
@@ -69,6 +71,14 @@ class TestScore(unittest.TestCase):
         rows = [self.row("expanding", 20.0, 1, 1.0, 1.0), self.row("expanding", 40.0, 0),
                 self.row("receding", 20.0, 0), self.row("translating", 20.0, 0), self.row("dimming", 20.0, 0)]
         self.assertEqual(score(rows, (20.0,))["margin"], 1.0)
+
+    def test_short_fraction_and_lag_per_rv(self):
+        rows = [self.row("expanding", 20.0, 1, 100.0, 10.0, par=98.0),   # lag -2, short
+                self.row("expanding", 20.0, 1, 120.0, 10.0, par=100.0),  # GF 20 ms after the raise began: long
+                self.row("expanding", 20.0, 0)]                          # no escape: not counted
+        s = score(rows, (20.0,))
+        self.assertEqual(s["short_fraction_by_rv"]["20.0"], 0.5)
+        self.assertEqual(s["parallel_minus_gf_ms_by_rv"]["20.0"], -11.0)
 
 
 if __name__ == "__main__":

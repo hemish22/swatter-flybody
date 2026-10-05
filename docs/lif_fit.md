@@ -58,3 +58,34 @@ interpolation.
 - **Provisional, not frozen.** The Brian2 code behind the LIF constants is still
   unchecked (the constants match the paper's Methods text), and criteria 3 and 4
   have not been run. The three parameters are frozen only after those.
+
+## Criterion 3 (takeoff mode): not met
+
+Rule: `offline/takeoff.py`, the plan's state machine with W = 6.87 ms, nothing
+fitted. Short fraction among expanding trials that escape, per r/v, at the chosen
+setting:
+
+| split | short fraction by r/v | parallel-DN first spike minus GF first spike (ms) |
+| --- | --- | --- |
+| train, r/v 10 / 20 / 40 / 80 | 1.0 / 1.0 / 1.0 / 1.0 | -1.2 / -1.9 / -2.3 / -0.7 |
+| test, r/v 14 / 28 / 57 | 1.0 / 1.0 / 1.0 | -1.4 / -1.0 / -2.0 |
+| test, r/v 7 / 120 | 1.0 / 1.0 | -0.8 / -0.9 |
+
+Every expanding trial is a short-mode takeoff, and so is every trial in 199 of
+the 206 settings that pass criterion 1 (lag range over them: -2.4 to 0.0 ms). The
+other 7 vary only because a few trials at r/v 10 do not escape, which changes the
+denominator; none shows a trend over r/v, and none fits the plan's direction
+better than noise. So no setting of the three parameters satisfies "short-mode
+fraction rises as r/v falls".
+
+Why: DNp103, the first parallel DN to fire in every trial, and the giant fiber are
+driven by the same LPLC2 population, and DNp103 leads the GF by about 1 to 2 ms at every r/v.
+That lag is set by the weight ratio, not by loom speed, and it is far below W. The
+other three parallel DNs (DNp04, DNp02, DNp11) fire 50 to 120 ms after the GF, so
+choosing them as the "parallel pathway" would make every escape short as well.
+
+What would be needed for the plan's mode behaviour is a mechanism that makes the
+GF late for slow looms relative to the wing-raise pathway: LC4's velocity input
+(undriven here), the GF's electrical inputs (absent from EM), or a nonlinearity
+in the real GF. None is in this graph. The game must not claim mode selection from
+the connectome; options are listed in `docs/week1_gate.md`.

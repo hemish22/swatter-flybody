@@ -45,6 +45,7 @@ from eye import Eye, render_loom  # noqa: E402
 from lif import EscapeGraph, LifParams, upsample_drive, with_params  # noqa: E402
 from loom import RV_MS, STIMULUS_KINDS, Loom  # noqa: E402
 from optic_gate import TYPES, Lplc2Drive  # noqa: E402
+from takeoff import classify  # noqa: E402
 
 # The most-driven LPLC2 neuron reaches this multiple of the threshold current at
 # expanding r/v = 20. 1.5 puts it clearly over threshold without saturating.
@@ -118,13 +119,19 @@ def trial_readout(spikes: np.ndarray, graph: EscapeGraph, params: LifParams, loo
             "gf_t_ms": None,
             "gf_theta_deg": None,
             "gf_ttc_ms": None,
+            "parallel_t_ms": None,
+            "mode": "none",
         }
+        par_t = np.flatnonzero(spikes[i][:, parallel].any(axis=1))
+        if par_t.size:
+            row["parallel_t_ms"] = float(par_t[0] * params.dt)
         if gf_t.size:
             t = float(gf_t[0] * params.dt)
             theta = loom.angular_size_deg()
             row["gf_t_ms"] = t
             row["gf_theta_deg"] = float(np.interp(t, loom.time_ms(), theta))
             row["gf_ttc_ms"] = float(loom.t_c_ms - t)
+        row["mode"] = classify(row["gf_t_ms"], row["parallel_t_ms"])
         out.append(row)
     return out
 

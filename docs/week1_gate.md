@@ -107,9 +107,10 @@ before claiming it.
 - **No electrical synapses,** and the GF's strongest recorded inputs are not the
   visual detectors (`docs/week0_status.md`), so the chemical path into it is
   incomplete. The fit compensates for a known deficit.
-- **Criteria 3 and 4 are not run.** Short/long mode needs the GF-versus-parallel
-  spike timing and heading needs left/right DN asymmetry; both are Week 2 and the
-  per-trial DN spike counts needed are already recorded in the sweep JSON.
+- **Criterion 3 fails** (`docs/lif_fit.md`): every escape is short-mode at every
+  r/v and every setting of the three parameters, because DNp103 and the GF are
+  co-driven and the GF is never later than the wing-raise window. Criterion 4 is
+  not run yet (heading needs left/right DN asymmetry).
 - **Gain rule.** `input_gain` by rule is a provisional number for the gate, not
   the Week 2 fit.
 - **One optic-lobe member (000),** the best of 18 measured by direction

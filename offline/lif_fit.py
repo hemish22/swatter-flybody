@@ -97,7 +97,17 @@ def score(rows: list[dict], rvs) -> dict:
         for rv in rvs
     }
     thetas = [v for v in theta.values() if v is not None]
+    # criterion 3 inputs: among expanding trials that escape at all, the short-mode fraction and the
+    # median lag (parallel first spike minus GF first spike; negative = parallel DNs lead) per r/v
+    short, lag = {}, {}
+    for rv in rvs:
+        e = [r for r in sel if r["kind"] == "expanding" and r["rv_ms"] == rv and r["mode"] != "none"]
+        short[str(rv)] = float(np.mean([r["mode"] == "short" for r in e])) if e else None
+        both = [r["parallel_t_ms"] - r["gf_t_ms"] for r in e if r["parallel_t_ms"] is not None and r["gf_t_ms"] is not None]
+        lag[str(rv)] = float(np.median(both)) if both else None
     return {
+        "short_fraction_by_rv": short,
+        "parallel_minus_gf_ms_by_rv": lag,
         "fraction": frac,
         "margin": frac["expanding"] - max(frac[k] for k in CONTROLS),
         "expanding_by_rv": by_rv,
