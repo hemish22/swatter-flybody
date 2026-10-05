@@ -109,13 +109,13 @@ class Engine:
         x[self.drive_neuron] = drive * np.float32(self.p["input_gain"])
         return x
 
-    def frame(self, frame) -> None:
-        """Take the next frame. The first call only latches it; each later one runs the 25 steps
-        between the previous frame and this one (so the engine is one frame, 5 ms, behind)."""
+    def frame(self, frame, substeps: int = SUBSTEPS) -> None:
+        """Take the next frame. The first call only latches it; each later one runs the `substeps` (25
+        for a 5 ms frame) steps between the previous frame and this one, so the engine is one frame behind."""
         cur = self._drive(frame)
         if self.prev_drive is not None:
-            for i in range(SUBSTEPS):
-                f = np.float32(i / SUBSTEPS)
+            for i in range(substeps):
+                f = np.float32(i / substeps)
                 self._substep(self._x(self.prev_drive * (1 - f) + cur * f))
         self.prev_drive = cur
 

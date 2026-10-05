@@ -33,6 +33,7 @@ interface Exports {
   init(...args: number[]): void;
   reset(): void;
   frame(rate: number, xr: number, yr: number, xl: number, yl: number): void;
+  frame_n(rate: number, xr: number, yr: number, xl: number, yl: number, substeps: number): void;
   finish(): void;
   step_count(): number;
   spike_count(): number;
@@ -79,8 +80,11 @@ export class FlyBrain {
   reset(): void { this.x.reset(); }
   /** Feed the next 5 ms frame. The engine is one frame behind: the first call only latches it. */
   frame(f: Frame): void { this.x.frame(f[0], f[1], f[2], f[3], f[4]); }
+  /** As `frame`, for an interval of `substeps` 0.2 ms steps (1 to 25), e.g. the last frame of a strike. */
+  frameFor(f: Frame, substeps: number): void { this.x.frame_n(f[0], f[1], f[2], f[3], f[4], substeps); }
   finish(): void { this.x.finish(); }
   get steps(): number { return this.x.step_count(); }
+  get spikeCount(): number { return this.x.spike_count(); }
 
   /** All spikes so far as [step, neuron] pairs. */
   spikes(): Array<[number, number]> {

@@ -211,12 +211,20 @@ pub extern "C" fn reset() {
 /// runs the 25 steps between the previous frame and this one.
 #[no_mangle]
 pub extern "C" fn frame(rate: f64, xr: f64, yr: f64, xl: f64, yl: f64) {
+    frame_n(rate, xr, yr, xl, yl, SUBSTEPS as u32);
+}
+
+/// As `frame`, for an interval of `substeps` 0.2 ms steps (1 to 25) since the previous frame.
+/// The game uses it for the last frame of a strike, which lands between 5 ms ticks.
+#[no_mangle]
+pub extern "C" fn frame_n(rate: f64, xr: f64, yr: f64, xl: f64, yl: f64, substeps: u32) {
+    let n = substeps.max(1) as usize;
     with(|e| {
         let cur = e.drive(&[rate, xr, yr, xl, yl]);
         if let Some(prev) = e.prev_drive.take() {
             let mut mix = vec![0f32; cur.len()];
-            for i in 0..SUBSTEPS {
-                let f = (i as f64 / SUBSTEPS as f64) as f32;
+            for i in 0..n {
+                let f = (i as f64 / n as f64) as f32;
                 for k in 0..cur.len() {
                     mix[k] = prev[k] * (1.0 - f) + cur[k] * f;
                 }

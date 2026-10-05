@@ -35,7 +35,8 @@ GPUs, ~4 min). Criterion 3 (mode) fails, criterion 4 (heading) is met: `docs/lif
 Validation v1 done: `docs/validation.md` (plots 1-4 and ablations 1, 3, 4; plot 5 and the GF-silenced mode need the game).
 Export + Python reference engine (`offline/export.py`, `offline/engine_ref.py`, `web/brain/`, `docs/engine.md`) agree on 50 parity stimuli.
 Rust/WASM engine built (`engine/`, `web/brain/engine.wasm`, tested via `offline/wasm_host.py` + wasmtime). Rust lives in ~/.cargo (`export PATH=$HOME/.cargo/bin:$PATH`); Node is in ~/.local/node (`export PATH=$HOME/.local/node/bin:$PATH`; `cd web && npm test` runs the TypeScript parity test).
-Not started:
+Game world model + round sim in `web/game/world.ts` (tests: `cd web && npm test`; skill curves: `node game/difficulty.ts`); defaults deviate from the plan on purpose, see `docs/game.md`.
+Not started: renderer/UI, overlay,
 `engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately not
 built (`docs/optic_lobe.md`).
 

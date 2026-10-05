@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test \"engine/*.test.ts\""
+    "test": "node --test \"engine/*.test.ts\" \"game/*.test.ts\""
   }
 }
