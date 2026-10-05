@@ -245,6 +245,12 @@ pub extern "C" fn finish() {
     });
 }
 
+/// Membrane potential of neuron `j`, mV (for the overlay; not needed to run a trial).
+#[no_mangle]
+pub extern "C" fn voltage(j: u32) -> f32 {
+    with(|e| e.v[j as usize])
+}
+
 #[no_mangle]
 pub extern "C" fn step_count() -> u32 {
     with(|e| e.step)

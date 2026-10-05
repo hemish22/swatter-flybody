@@ -167,6 +167,8 @@ export class Round {
   swatter = { x: 0, y: 0, z: CONFIG.hoverHeightMm };
   /** The swatter's angular size at each tick, for the card and the replay. */
   readonly thetaDeg: number[] = [];
+  /** Giant-fiber membrane potential (mV) at each tick, right and left, for the overlay. */
+  readonly gfVoltage: { right: number[]; left: number[] } = { right: [], left: [] };
 
   private brain: FlyBrain;
   private cfg: Config;
@@ -182,6 +184,7 @@ export class Round {
   private tGf: number | null = null;
   private tPar: number | null = null;
   private roleSets: { gf: Set<number>; par: Set<number> };
+  private gfIndex: { right: number; left: number };
 
   constructor(brain: FlyBrain, seed: number, cfg: Config = CONFIG) {
     this.brain = brain;
@@ -193,10 +196,24 @@ export class Round {
       heading: r() * 2 * Math.PI,
     };
     this.roleSets = { gf: new Set(brain.manifest.roles.gf), par: new Set(brain.manifest.roles.parallel) };
+    const side = (s: string) => brain.manifest.roles.gf[brain.manifest.roles.target_side.indexOf(s)];
+    this.gfIndex = { right: side("R"), left: side("L") }; // target_side is aligned with gf first
     brain.reset();
   }
 
   get timeMs(): number { return this.tickIndex * this.cfg.tickMs; }
+
+  /** 0 to 1 while the button is held in the hover phase, else 0. */
+  get charge(): number {
+    if (this.phase !== "hover" || this.holdStartTick < 0) return 0;
+    return Math.min(1, ((this.tickIndex - this.holdStartTick) * this.cfg.tickMs) / this.cfg.chargeMs);
+  }
+
+  /** When the fly lost leg contact (ms from round start), once the spikes have decided it; else null. */
+  get leftAtMs(): number | null { return this.takeoff ? this.takeoff.leaveMs : null; }
+
+  /** First giant-fiber and parallel-DN spike seen so far, ms. */
+  get firstSpikes(): { gf: number | null; parallel: number | null } { return { gf: this.tGf, parallel: this.tPar }; }
 
   /** Advance one 5 ms tick with this cursor state. */
   tick(inp: Input): void {
@@ -243,6 +260,8 @@ export class Round {
       return this.resolve(impactMs);
     }
     this.brain.frame(frame);
+    this.gfVoltage.right.push(this.brain.voltage(this.gfIndex.right));
+    this.gfVoltage.left.push(this.brain.voltage(this.gfIndex.left));
     this.readSpikes(t);
 
     if (this.takeoff && this.takeoff.leaveMs <= t && this.phase === "hover") return this.end("spooked", t);

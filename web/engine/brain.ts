@@ -35,6 +35,7 @@ interface Exports {
   frame(rate: number, xr: number, yr: number, xl: number, yl: number): void;
   frame_n(rate: number, xr: number, yr: number, xl: number, yl: number, substeps: number): void;
   finish(): void;
+  voltage(j: number): number;
   step_count(): number;
   spike_count(): number;
   spikes_ptr(): number;
@@ -83,6 +84,8 @@ export class FlyBrain {
   /** As `frame`, for an interval of `substeps` 0.2 ms steps (1 to 25), e.g. the last frame of a strike. */
   frameFor(f: Frame, substeps: number): void { this.x.frame_n(f[0], f[1], f[2], f[3], f[4], substeps); }
   finish(): void { this.x.finish(); }
+  /** Membrane potential of neuron j, mV. */
+  voltage(j: number): number { return this.x.voltage(j); }
   get steps(): number { return this.x.step_count(); }
   get spikeCount(): number { return this.x.spike_count(); }
 

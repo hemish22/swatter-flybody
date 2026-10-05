@@ -2,8 +2,8 @@
 
 Status: contract, exporter, a Python reference engine and the Rust/WASM engine
 (`engine/`, 31 KiB, no dependencies) exist and all agree on 50 fixed stimuli, and the
-TypeScript glue (`web/engine/brain.ts`) passes the same parity set under Node. No browser
-has run it yet.
+TypeScript glue (`web/engine/brain.ts`) passes the same parity set under Node and in headless
+Chrome 152 (`web/browser_check.sh`: 50 of 50, 0 mismatches).
 
 ## Contract
 
@@ -54,7 +54,7 @@ outside one step, so the test is sensitive. The test skips when `web/brain` is a
 
 ## The Rust/WASM engine
 
-`engine/src/lib.rs`: C ABI (`alloc`, `init`, `reset`, `frame`, `finish`, spike readout), no
+`engine/src/lib.rs`: C ABI (`alloc`, `init`, `reset`, `frame`, `frame_n`, `finish`, spike and voltage readout), no
 wasm-bindgen and no crates, so any host can load it. Arithmetic mirrors the numpy
 reference step for step. Build and install:
 
@@ -96,8 +96,7 @@ computes mode and heading from the spikes with the plan's fixed rules.
 
 ## Not done
 
-- Nothing in a browser has run: the in-browser parity run and the game's frame generation are
-  still to do. Node here is a user-space install (`~/.local/node`), Rust is in `~/.cargo`.
+- Only headless Chrome on Linux has run it, with no timing from a laptop: the 6.7 ms Node figure is the only
+  speed measurement of the JS path. Node here is a user-space install (`~/.local/node`), Rust is in `~/.cargo`.
 - Parameters are provisional (Brian2 check, criterion 3 decision).
-- The engine runs the LIF circuit only. Frame generation from the game's world (swatter
-  position and size to `(rate, x, y)` per eye) is the game's job and is not written.
+- The engine runs the LIF circuit only; frame generation from the world is `web/game/world.ts` (`docs/game.md`).

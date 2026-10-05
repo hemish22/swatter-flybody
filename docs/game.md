@@ -1,7 +1,10 @@
 # Game world model (web/game) and what the frozen brain does to it
 
 Status: the world model, a deterministic round simulator and a skill analysis exist and are tested
-under Node against the real engine. There is no renderer, cursor handling, UI or overlay yet.
+under Node against the real engine, and a playable Classic round runs in a browser (`web/index.html`):
+Canvas2D arena, mouse hover and hold-to-charge, post-round card, live giant-fiber/angular-size overlay,
+slow replay. Not done: Streak and Lab modes, the leaderboard, sound, touch handling, the hexagonal eye
+heatmaps and LPLC2/DN population panels of the plan's overlay, a pixel scale tuned by play.
 
 ## The finding that shaped the rules
 
@@ -74,7 +77,25 @@ Dead ahead is the fly's blind spot in this model, ten times more forgiving than 
 the lateral eye-axis assumption (front and back sit at the edge of both eyes' fields), so it is a prediction of
 the model as built, not something measured in flies.
 
+## The page
+
+`cd web && npm run build`, serve `web/` over HTTP (the engine is fetched), open `index.html`.
+`web/browser_check.sh` runs the 50-stimulus parity set and three scripted rounds (`?demo=hit|escape|spook`)
+in headless Chrome. The card, the overlay (GF voltage, solid right and dashed left, with the threshold, plus
+the swatter's angular size) and the slow replay (0.25x, re-simulated from the trace) all come from `Round`.
+
+![hit](figures/game_hit.png)
+![escaped](figures/game_escape.png)
+![spooked](figures/game_spook.png)
+
 ## Limits to keep in mind
+
+- At a 40 mm hover the swatter subtends about 100 degrees at the fly's eye, so the card's "swatter size when
+  the giant fiber fired" is near that for any strike from a hover, and is not comparable with the 8 to 30
+  degrees of the lab looms (`docs/validation.md`, plot 1). The model responds to growth rate, not size.
+- Takeoff mode is not always short in the game: the scripted "spooked" round was long-mode, because where
+  the swatter sits changes the giant-fiber timing (`docs/lif_fit.md`, addendum). What does not appear is the
+  plan's trend with loom speed.
 
 - **The response is a switch.** The circuit is deterministic with no noise, so hit rate against speed (and
   against creep speed) steps from 0 to 1 over a narrow range instead of sloping. The "fly escapes most
