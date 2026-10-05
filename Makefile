@@ -8,7 +8,7 @@
 .PHONY: help
 help:
 	@echo "local (cheap):   stimuli suite-sizes lint test check clean-local"
-	@echo "DGX (expensive): setup fetch extract loom-sweep ablations export status logs pull"
+	@echo "DGX (expensive): setup fetch extract weights malecns-ol optic-gate test-dgx loom-sweep ablations export status logs pull"
 
 # --- local, cheap --------------------------------------------------------- #
 
@@ -59,6 +59,23 @@ fetch: ## DGX: download the MaleCNS tables (~1.1 GB)
 .PHONY: extract
 extract: ## DGX: build the escape subgraph and count it
 	./scripts/dgx.sh run extract_subgraph
+
+.PHONY: weights
+weights: ## DGX: flyvis pretrained ensemble into data/flyvis (CPU, ~1 min)
+	FLYVIS_ROOT_DIR=$(CURDIR)/data/flyvis CUDA_VISIBLE_DEVICES= .venv/bin/flyvis download-pretrained
+
+.PHONY: malecns-ol
+malecns-ol: ## DGX: column assignment, flyvis-lattice orientation and LPLC2<-T4/T5 inputs, both sides
+	./scripts/dgx.sh run malecns_ol --side R
+	./scripts/dgx.sh run malecns_ol --side L
+
+.PHONY: optic-gate
+optic-gate: ## DGX: Week 1 gate, optic-lobe half (set CUDA_VISIBLE_DEVICES to a free GPU first)
+	./scripts/dgx.sh run optic_gate --dt-check
+
+.PHONY: test-dgx
+test-dgx: ## DGX: the tests that run the real flyvis network (CPU, ~1 min)
+	SWATTER_REMOTE=1 .venv/bin/python -m unittest tests.test_optic_wrapper -v
 
 .PHONY: loom-sweep
 loom-sweep: ## DGX: run the four success criteria across the r/v sweep

@@ -4,6 +4,8 @@ data/raw/
 
 # Derived artefacts. Small enough to rebuild, and the DGX is the source of truth.
 data/subgraph/
+data/ol/
+data/flyvis/
 data/sweeps/
 docs/figures/
 docs/loom_suite.json
