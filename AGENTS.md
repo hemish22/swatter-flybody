@@ -32,6 +32,7 @@ Built: `eye.py`, `optic_wrapper.py`, `malecns_ol.py`, `optic_gate.py` (optic lob
 kept offline), `escape_graph.py`, `lif.py`, `loom_sweep.py`, `lif_scan.py`.
 Held-out LIF fit done, provisional (`offline/lif_fit.py`, `docs/lif_fit.md`; sharded over
 GPUs, ~4 min). Criterion 3 (mode) fails, criterion 4 (heading) is met: `docs/lif_fit.md`, `docs/heading.md`.
+Validation v1 done: `docs/validation.md` (plots 1-4 and ablations 1, 3, 4; plot 5 and the GF-silenced mode need the game).
 Not started: `export.py`,
 `engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately not
 built (`docs/optic_lobe.md`).

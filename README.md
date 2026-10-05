@@ -30,7 +30,7 @@ comes from the connectome-wired LIF circuit (`offline/lif.py`,
 expanding trial and no control, at 31 of 60 parameter settings.
 
 Held-out fit done, provisional (`docs/lif_fit.md`); criterion 3 fails and criterion 4 is met
-(`docs/heading.md`). Not started: the export (`export.py`), and all of `engine/`, `web/`, `server/`.
+(`docs/heading.md`). Validation v1 done (`docs/validation.md`, `offline/validation.py`). Not started: the export (`export.py`), and all of `engine/`, `web/`, `server/`.
 
 ## Heavy work runs on the DGX
 
@@ -83,7 +83,7 @@ docs/
   week0_status.md    what Week 0 found
   optic_lobe.md      Week 1 optic lobe results
   week1_gate.md      Week 1 gate decision (No-go rescope) and evidence
-  validation.md      plots vs published data              [Week 2]
+  validation.md      plots and ablations (v1 done)        [Week 2]
 scripts/dgx.sh       remote runner
 tests/               cheap tests, no connectome data needed
 ```

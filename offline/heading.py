@@ -76,29 +76,14 @@ def asymmetry(spikes: np.ndarray, targets: np.ndarray, side: np.ndarray, dt_ms: 
     }
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--fit", type=Path, default=Path("docs/lif_fit.json"))
-    ap.add_argument("--graph", type=Path, default=Path("data/ol/escape_graph.npz"))
-    ap.add_argument("--save", type=Path, default=Path("docs/heading.json"))
-    args = ap.parse_args()
-    require_remote_execution("heading.py", "bilateral loom trials through the LIF circuit on a GPU")
-    import torch
-
-    if not torch.cuda.is_available():
-        raise SystemExit("no GPU visible: set CUDA_VISIBLE_DEVICES to a free GPU (nvidia-smi)")
-    from lif import EscapeGraph, LifParams, upsample_drive, with_params
+def heading_trials(graph, params, azimuths) -> list[dict]:
+    """Bilateral expanding looms at each body azimuth and r/v through `graph`; one asymmetry row per trial."""
+    from lif import upsample_drive
     from loom import Loom
     from loom_sweep import DURATION_MS, OPTIC_DT_MS, angular_drive
 
-    fit = json.loads(args.fit.read_text())
-    ch = fit["chosen"]
-    params = with_params(LifParams(), input_gain=ch["input_gain"], weight_scale=ch["weight_scale"], v_th=ch["v_th"])
-    graph = EscapeGraph.load(args.graph)
     targets = np.flatnonzero(graph.role == "target")
     net = graph.network(params, "cuda")
-
-    azimuths = [float(a) for a in np.arange(0, 360, 22.5)]  # the plan's 8 plus 8 in between
     rows = []
     for rv in RVS:
         looms = [Loom(kind="expanding", rv_ms=rv, azimuth_deg=a, duration_ms=DURATION_MS, dt_ms=OPTIC_DT_MS) for a in azimuths]
@@ -110,22 +95,47 @@ def main() -> int:
         spikes = net.run(total * params.input_gain)["spikes"]
         for i, a in enumerate(azimuths):
             rows.append({"rv_ms": rv, "azimuth_deg": a, **asymmetry(spikes[i], targets, graph.side, params.dt)})
+    return rows
 
+
+def summarise(rows: list[dict]) -> dict:
     lateral = [r for r in rows if abs(np.sin(np.radians(r["azimuth_deg"]))) >= LATERAL_MIN_SIN and r["fired"]]
     ahead_behind = [r for r in rows if abs(np.sin(np.radians(r["azimuth_deg"]))) < 1e-9 and r["fired"]]
     right_side = lambda r: np.sin(np.radians(r["azimuth_deg"])) > 0
     # A > 0 (right DNs stronger) must go with a stimulus on the right
     correct = [np.sign(r["A"]) == (1 if right_side(r) else -1) for r in lateral if r["A"] != 0]
     first_ok = [r["first_side"] == ("R" if right_side(r) else "L") for r in lateral]
-    summary = {
+    return {
         "n_trials": len(rows), "n_fired": sum(r["fired"] for r in rows),
         "lateral_trials_fired": len(lateral),
         "lateral_heading_away_fraction": float(np.mean(correct)) if correct else None,
         "lateral_first_dn_ipsilateral_fraction": float(np.mean(first_ok)) if first_ok else None,
         "lateral_mean_abs_A": float(np.mean([abs(r["A"]) for r in lateral])) if lateral else None,
         "ahead_behind_mean_abs_A": float(np.mean([abs(r["A"]) for r in ahead_behind])) if ahead_behind else None,
-        "params": {"input_gain": ch["input_gain"], "weight_scale": ch["weight_scale"], "v_th": ch["v_th"]},
     }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--fit", type=Path, default=Path("docs/lif_fit.json"))
+    ap.add_argument("--graph", type=Path, default=Path("data/ol/escape_graph.npz"))
+    ap.add_argument("--save", type=Path, default=Path("docs/heading.json"))
+    args = ap.parse_args()
+    require_remote_execution("heading.py", "bilateral loom trials through the LIF circuit on a GPU")
+    import torch
+
+    if not torch.cuda.is_available():
+        raise SystemExit("no GPU visible: set CUDA_VISIBLE_DEVICES to a free GPU (nvidia-smi)")
+    from lif import EscapeGraph, LifParams, with_params
+
+    fit = json.loads(args.fit.read_text())
+    ch = fit["chosen"]
+    params = with_params(LifParams(), input_gain=ch["input_gain"], weight_scale=ch["weight_scale"], v_th=ch["v_th"])
+    graph = EscapeGraph.load(args.graph)
+    azimuths = [float(a) for a in np.arange(0, 360, 22.5)]  # the plan's 8 plus 8 in between
+    rows = heading_trials(graph, params, azimuths)
+    summary = summarise(rows)
+    summary["params"] = {"input_gain": ch["input_gain"], "weight_scale": ch["weight_scale"], "v_th": ch["v_th"]}
     banner("criterion 4: heading from left/right DN asymmetry")
     print(f"{'az':>6} | " + " ".join(f"{'rv ' + str(int(rv)):>9}" for rv in RVS) + "   (A = (R-L)/(R+L); '-' no escape DN spike)")
     for a in azimuths:
