@@ -65,6 +65,16 @@ def build_trials(rvs=RV_MS):
     ]
 
 
+def rf_centres(lplc2_npz: Path) -> np.ndarray:
+    """(n, 2) receptive-field centre of each LPLC2 neuron on the eye plane, degrees: the
+    centroid of its T4/T5 input columns, weighted by synapse count."""
+    from eye import column_plane_deg, flyvis_columns
+
+    w = np.load(lplc2_npz)["weights"].sum(axis=1)  # (n, 721)
+    plane = column_plane_deg(flyvis_columns())
+    return (w[:, :, None] * plane[None]).sum(axis=1) / np.maximum(w.sum(axis=1, keepdims=True), 1e-9)
+
+
 def angular_drive(looms, lplc2_npz: Path, rf_sigma_deg: float = 15.0, positions: np.ndarray | None = None) -> np.ndarray:
     """The plan's No-go fallback: LPLC2 driven directly by the stimulus's angular growth.
 
@@ -79,12 +89,9 @@ def angular_drive(looms, lplc2_npz: Path, rf_sigma_deg: float = 15.0, positions:
     says nothing about the optic lobe; it only says the LIF circuit and the
     connectome weights downstream behave sensibly. The UI has to say so.
     """
-    from eye import LAB_ECCENTRICITY_DEG, column_plane_deg, flyvis_columns
+    from eye import LAB_ECCENTRICITY_DEG
 
-    z = np.load(lplc2_npz)
-    w = z["weights"].sum(axis=1)  # (n, 721)
-    plane = column_plane_deg(flyvis_columns())
-    centre = (w[:, :, None] * plane[None]).sum(axis=1) / np.maximum(w.sum(axis=1, keepdims=True), 1e-9)
+    centre = rf_centres(lplc2_npz)
     out = np.zeros((len(looms), looms[0].n_steps, len(centre)), dtype=np.float32)
     for i, loom in enumerate(looms):
         rate = np.clip(np.gradient(loom.angular_size_deg(), loom.dt_ms), 0.0, None)  # deg/ms

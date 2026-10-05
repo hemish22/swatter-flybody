@@ -89,3 +89,14 @@ GF late for slow looms relative to the wing-raise pathway: LC4's velocity input
 (undriven here), the GF's electrical inputs (absent from EM), or a nonlinearity
 in the real GF. None is in this graph. The game must not claim mode selection from
 the connectome; options are listed in `docs/week1_gate.md`.
+
+### Addendum: criterion 3 in the bilateral body-frame geometry
+
+The table above is the lab suite (right eye, 40 deg off axis, azimuths 0 to 315 in the eye plane). The
+same question under `heading.py`'s bilateral geometry (16 body azimuths, both eyes, r/v 10 to 80 plus 14,
+28, 57), at the chosen setting, for lateral stimuli (14 per r/v that fire): short fraction 0.93 / 0.86 /
+0.86 / 0.79 / 0.93 / 0.93 / 0.93 at r/v 10 / 14 / 20 / 28 / 40 / 57 / 80. There are long-mode trials here
+(11 of 98), but they sit at azimuths 22.5, 315 and 337.5, near the front of the field where the GF is late or
+silent, and they do not vary with r/v in either direction. So the conclusion stands: **no short-fraction
+trend with r/v**; what sets long mode in this model is where the stimulus lands, which the plan does not
+claim. (Scratch analysis, not in a committed script.)

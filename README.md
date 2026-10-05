@@ -30,7 +30,7 @@ comes from the connectome-wired LIF circuit (`offline/lif.py`,
 expanding trial and no control, at 31 of 60 parameter settings.
 
 Held-out fit done, provisional (`docs/lif_fit.md`); criterion 3 fails and criterion 4 is met
-(`docs/heading.md`). Validation v1 done (`docs/validation.md`, `offline/validation.py`). Not started: the export (`export.py`), and all of `engine/`, `web/`, `server/`.
+(`docs/heading.md`). Validation v1 done (`docs/validation.md`). Export and a Python reference engine done, parity on 50 stimuli (`docs/engine.md`). Not started: the Rust/WASM engine, and all of `engine/`, `web/`, `server/`.
 
 ## Heavy work runs on the DGX
 
