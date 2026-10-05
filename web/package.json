@@ -1,0 +1,12 @@
+{
+  "name": "swatter-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"engine/*.test.ts\" \"game/*.test.ts\"",
+    "build": "esbuild engine/browser_parity.ts game/main.ts --bundle --format=esm --outdir=dist --target=es2022"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

@@ -10,6 +10,7 @@ dependencies = [
   "pandas>=2.2",
   "matplotlib>=3.8",
   "torch>=2.4",
+  "flyvis==1.2.0",
 ]
 
 [build-system]

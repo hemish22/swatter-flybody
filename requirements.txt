@@ -6,3 +6,6 @@ pyarrow>=17
 pandas>=2.2
 matplotlib>=3.8
 torch>=2.4
+# Optic lobe. Pretrained ensemble: FLYVIS_ROOT_DIR=data/flyvis flyvis download-pretrained
+flyvis==1.2.0
+wasmtime>=30  # runs the WASM engine in tests (offline/wasm_host.py)

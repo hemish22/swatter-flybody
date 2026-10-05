@@ -1,0 +1,140 @@
+{
+  "plot1_theta_by_rv": {
+    "10.0": 7.808695223607123,
+    "20.0": 10.238040490395655,
+    "40.0": 13.216551547281592,
+    "80.0": 20.636315539072474
+  },
+  "ablation1_lplc2": {
+    "0.0": {
+      "expanding_gf_fraction": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "expanding_by_rv": {
+        "10.0": 1.0,
+        "20.0": 1.0,
+        "40.0": 1.0,
+        "80.0": 1.0
+      }
+    },
+    "0.25": {
+      "expanding_gf_fraction": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "expanding_by_rv": {
+        "10.0": 1.0,
+        "20.0": 1.0,
+        "40.0": 1.0,
+        "80.0": 1.0
+      }
+    },
+    "0.5": {
+      "expanding_gf_fraction": {
+        "mean": 0.975,
+        "min": 0.9375,
+        "max": 1.0
+      },
+      "expanding_by_rv": {
+        "10.0": 0.925,
+        "20.0": 0.975,
+        "40.0": 1.0,
+        "80.0": 1.0
+      }
+    },
+    "0.75": {
+      "expanding_gf_fraction": {
+        "mean": 0.85,
+        "min": 0.78125,
+        "max": 0.9375
+      },
+      "expanding_by_rv": {
+        "10.0": 0.65,
+        "20.0": 0.825,
+        "40.0": 0.95,
+        "80.0": 0.975
+      }
+    },
+    "0.9": {
+      "expanding_gf_fraction": {
+        "mean": 0.45625,
+        "min": 0.375,
+        "max": 0.625
+      },
+      "expanding_by_rv": {
+        "10.0": 0.1,
+        "20.0": 0.425,
+        "40.0": 0.575,
+        "80.0": 0.725
+      }
+    },
+    "1.0": {
+      "expanding_gf_fraction": {
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "expanding_by_rv": {
+        "10.0": 0.0,
+        "20.0": 0.0,
+        "40.0": 0.0,
+        "80.0": 0.0
+      }
+    }
+  },
+  "ablation3_shuffle": {
+    "n": 20,
+    "expanding_gf_fraction": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "controls_max_gf_fraction": 0.0,
+    "theta_spread": {
+      "mean": 2.6494720720578537,
+      "min": 2.5087754819470107,
+      "max": 2.7806551632657754
+    },
+    "unshuffled_theta_spread": 2.642735431226089,
+    "n_with_no_expanding_spike": 0,
+    "n_expanding_all_rv_perfect": 20,
+    "heading_lateral_away_fraction": {
+      "mean": 0.4871706359955598,
+      "min": 0.2682926829268293,
+      "max": 0.7941176470588235,
+      "real": 1.0
+    },
+    "heading_ipsilateral_first_fraction": {
+      "mean": 0.4968749999999999,
+      "min": 0.2708333333333333,
+      "max": 0.7916666666666666,
+      "real": 1.0
+    }
+  },
+  "ablation4_bot": {
+    "swatter_half_width_mm": 50.0,
+    "circuit_trigger_distance_mm_by_rv": {
+      "10.0": 734.4999999999999,
+      "20.0": 561.75,
+      "40.0": 431.625,
+      "80.0": 274.75
+    },
+    "circuit_time_to_collision_ms_by_rv": {
+      "10.0": 146.89999999999998,
+      "20.0": 224.7,
+      "40.0": 345.3,
+      "80.0": 439.6
+    },
+    "bot_distance_mm": 561.75,
+    "bot_time_to_collision_ms_by_rv": {
+      "10.0": 112.35,
+      "20.0": 224.7,
+      "40.0": 449.4,
+      "80.0": 898.8
+    },
+    "circuit_distance_ratio_fastest_over_slowest": 2.673339399454049
+  }
+}
