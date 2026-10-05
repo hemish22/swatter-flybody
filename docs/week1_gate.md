@@ -99,7 +99,7 @@ before claiming it.
   cross-check" row. Until then call this "a LIF model in the style of Shiu et al.". One spike's peak PSP is
   ~0.043 mV per synapse, so crossing the 7 mV gap takes ~162 synapses on one spike;
   the giant fiber fires on many LPLC2 spikes together.
-- **Monocular.** The right eye is stimulated; the 94 left LPLC2 neurons are in
+- **Monocular (gate and fit runs).** The right eye is stimulated; the 94 left LPLC2 neurons are in
   the graph and driven by nothing, and the giant fiber is bilateral.
 - **LC4 is undriven.** Its inputs are lobula types flyvis does not model, so the
   99 LC4 relays only receive what LPLC2 sends them. The plan's "LC4 encodes
@@ -109,8 +109,9 @@ before claiming it.
   incomplete. The fit compensates for a known deficit.
 - **Criterion 3 fails** (`docs/lif_fit.md`): every escape is short-mode at every
   r/v and every setting of the three parameters, because DNp103 and the GF are
-  co-driven and the GF is never later than the wing-raise window. Criterion 4 is
-  not run yet (heading needs left/right DN asymmetry).
+  co-driven and the GF is never later than the wing-raise window. **Criterion 4
+  is met** (`docs/heading.md`): bilateral drive, escape-DN asymmetry points away
+  from the stimulus in 48 of 48 lateral trials; front/back is undetermined.
 - **Gain rule.** `input_gain` by rule is a provisional number for the gate, not
   the Week 2 fit.
 - **One optic-lobe member (000),** the best of 18 measured by direction

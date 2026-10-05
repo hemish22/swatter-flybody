@@ -29,8 +29,8 @@ comes from the connectome-wired LIF circuit (`offline/lif.py`,
 `offline/loom_sweep.py`). Under that drive the giant fiber spikes for every
 expanding trial and no control, at 31 of 60 parameter settings.
 
-Held-out fit done, provisional (`docs/lif_fit.md`). Not started: criteria 3 and 4 (takeoff mode,
-heading), the export (`export.py`), and all of `engine/`, `web/`, `server/`.
+Held-out fit done, provisional (`docs/lif_fit.md`); criterion 3 fails and criterion 4 is met
+(`docs/heading.md`). Not started: the export (`export.py`), and all of `engine/`, `web/`, `server/`.
 
 ## Heavy work runs on the DGX
 

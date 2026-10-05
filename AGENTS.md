@@ -31,7 +31,8 @@ measured counts and DN identities.
 Built: `eye.py`, `optic_wrapper.py`, `malecns_ol.py`, `optic_gate.py` (optic lobe,
 kept offline), `escape_graph.py`, `lif.py`, `loom_sweep.py`, `lif_scan.py`.
 Held-out LIF fit done, provisional (`offline/lif_fit.py`, `docs/lif_fit.md`; sharded over
-GPUs, ~4 min). Not started: criteria 3 and 4, `export.py`,
+GPUs, ~4 min). Criterion 3 (mode) fails, criterion 4 (heading) is met: `docs/lif_fit.md`, `docs/heading.md`.
+Not started: `export.py`,
 `engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately not
 built (`docs/optic_lobe.md`).
 

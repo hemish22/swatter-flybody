@@ -65,13 +65,15 @@ def build_trials(rvs=RV_MS):
     ]
 
 
-def angular_drive(looms, lplc2_npz: Path, rf_sigma_deg: float = 15.0) -> np.ndarray:
+def angular_drive(looms, lplc2_npz: Path, rf_sigma_deg: float = 15.0, positions: np.ndarray | None = None) -> np.ndarray:
     """The plan's No-go fallback: LPLC2 driven directly by the stimulus's angular growth.
 
         drive_i(t) = relu(d theta / dt) * exp(-d_i^2 / (2 sigma^2))
 
     where d_i is the angle between the disc and neuron i's receptive-field centre
-    (the centroid of its T4/T5 inputs on the eye plane). Growth rate, not size:
+    (the centroid of its T4/T5 inputs on the eye plane). `positions` (N, 2), if
+    given, places each disc at those eye-plane coordinates in degrees instead of
+    at the lab eccentricity and the loom's position angle (used for heading). Growth rate, not size:
     a disc of constant size, translating or fading, drives nothing, and a
     receding one drives nothing. That is selective BY CONSTRUCTION, so a pass here
     says nothing about the optic lobe; it only says the LIF circuit and the
@@ -86,7 +88,10 @@ def angular_drive(looms, lplc2_npz: Path, rf_sigma_deg: float = 15.0) -> np.ndar
     out = np.zeros((len(looms), looms[0].n_steps, len(centre)), dtype=np.float32)
     for i, loom in enumerate(looms):
         rate = np.clip(np.gradient(loom.angular_size_deg(), loom.dt_ms), 0.0, None)  # deg/ms
-        disc = LAB_ECCENTRICITY_DEG * np.array([np.cos(np.radians(loom.azimuth_deg)), np.sin(np.radians(loom.azimuth_deg))])
+        if positions is not None:
+            disc = np.asarray(positions[i], dtype=float)
+        else:
+            disc = LAB_ECCENTRICITY_DEG * np.array([np.cos(np.radians(loom.azimuth_deg)), np.sin(np.radians(loom.azimuth_deg))])
         if loom.kind == "translating":
             continue  # constant size: zero growth, drive is exactly zero whatever the position
         d = np.linalg.norm(centre - disc[None], axis=1)
