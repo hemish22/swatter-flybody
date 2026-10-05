@@ -20,16 +20,23 @@ generation, `make test`, reading the manifest, byte-compiling.
 
 ## State
 
-Week 0 done. Week 1 is the go/no-go gate. Read `docs/week0_status.md` first —
-it has the measured neuron and synapse counts, the confirmed parallel escape DN
-identities, and what is deliberately not started.
+Week 0 done. Week 1 is the go/no-go gate. The optic lobe half of the gate has
+been run: **Partial, not Go**. Read `docs/optic_lobe.md` first (it supersedes
+the "what is left" list in `docs/week0_status.md`), then `docs/week0_status.md`
+for the measured neuron and synapse counts and the escape DN identities.
 
-Not started, and in dependency order: `optic_wrapper.py` (flyvis on the MaleCNS
-lattice — critical path), `lif.py`, `loom_sweep.py`, `export.py`, then
-`engine/`, `web/`, `server/`.
+Built: `offline/eye.py` (721-column lattice, 2-D loom renderer),
+`offline/optic_wrapper.py` (flyvis behind `OpticLobe`), `offline/malecns_ol.py`
+(MaleCNS columns, lattice orientation, LPLC2 <- T4/T5), `offline/optic_gate.py`.
+Not started, in dependency order: `lif.py`, `loom_sweep.py`, `export.py`, then
+`engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately
+not built (reasons in `docs/optic_lobe.md`).
 
-The DGX has not been reached yet — `h4hgpu` and `172.16.0.32` both time out on
-port 22. `scripts/dgx.sh` is written but untested against a real machine.
+**This host, `dgxa100`, is the DGX.** No ssh hop and no `scripts/dgx.sh`: run
+jobs directly with `SWATTER_REMOTE=1 SWATTER_DATA=data .venv/bin/python
+offline/<job>.py`. That variable is the repo's own DGX marker, not a bypass. The
+GPUs are shared: check `nvidia-smi` and pick a free one with
+`CUDA_VISIBLE_DEVICES`, and cap `torch.set_num_threads` in anything CPU-side.
 
 ## Conventions
 
@@ -43,6 +50,9 @@ port 22. `scripts/dgx.sh` is written but untested against a real machine.
 - Never hardcode a cell type or body ID that could be looked up. `extract_subgraph.py`
   derives the parallel escape DNs by ranking the data and scores the literature
   names against the result.
+- Trials start from a network settled on their own first frame, never on a bare
+  sky: otherwise a disc already on screen at t=0 arrives as an onset flash and
+  swamps the loom-versus-control comparison (`docs/optic_lobe.md`).
 - Every bug found gets a regression test in `tests/` that is cheap to run. The
   units bug (radians against degrees) and the post/ pre-major transpose bug both
   produced plausible-looking output, which is exactly why they are pinned now.

@@ -21,9 +21,15 @@ Done:
 - Escape subgraph extracted and counted: 166,700 neurons, 25.6M edges
 - Lab stimulus generator with all four control conditions, 128 trials
 
-Not started: the optic lobe (`optic_wrapper.py`), the LIF stage (`lif.py`), the
-sweep harness (`loom_sweep.py`), the export (`export.py`), and all of
-`engine/`, `web/`, `server/`.
+Week 1, optic lobe: built and run (`docs/optic_lobe.md`). The eye lattice and
+loom renderer, flyvis behind `OpticLobe`, the MaleCNS column assignment and
+LPLC2 <- T4/T5 wiring for both eyes. Gate verdict so far is **Partial**: the
+optic lobe carries a clean motion signal and the MaleCNS LPLC2 wiring is radial,
+but translating discs are not separated from looming ones by a linear or
+four-direction-coincidence readout.
+
+Not started: the LIF stage (`lif.py`), the sweep harness (`loom_sweep.py`), the
+export (`export.py`), and all of `engine/`, `web/`, `server/`.
 
 ## Heavy work runs on the DGX
 
@@ -47,7 +53,7 @@ Local work stays for cheap things, which run in under a second:
 
 ```sh
 make stimuli      # stimulus suite summary
-make test         # 33 unit tests
+make test         # 55 unit tests (4 more on the DGX: make test-dgx)
 make manifest     # escape-circuit counts from the manifest
 make check        # all of the above
 ```
@@ -60,12 +66,17 @@ offline/
   fetch_malecns.py   download the MaleCNS tables        [DGX, ~1.1 GB]
   extract_subgraph.py escape subgraph + circuit counts  [DGX, ~2 min]
   loom.py            lab stimuli and controls           [local, instant]
+  eye.py             721-column lattice, 2-D loom renderer [local, instant]
+  optic_wrapper.py   flyvis optic lobe behind OpticLobe    [GPU]
+  malecns_ol.py      MaleCNS columns, orientation, LPLC2<-T4/T5 [DGX, 30 s]
+  optic_gate.py      Week 1 gate, optic-lobe half          [GPU, ~1 min]
 engine/              Rust -> WASM, WGSL shaders          [Week 3]
 web/
   game/ overlay/ lab/ TypeScript, Vite, Canvas2D         [Week 4]
 server/              leaderboard + re-sim                 [Week 5]
 docs/
   week0_status.md    what Week 0 found
+  optic_lobe.md      Week 1 optic lobe results and gate verdict
   validation.md      plots vs published data              [Week 2]
 scripts/dgx.sh       remote runner
 tests/               cheap tests, no connectome data needed
