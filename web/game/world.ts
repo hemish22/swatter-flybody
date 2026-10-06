@@ -169,6 +169,11 @@ export class Round {
   readonly thetaDeg: number[] = [];
   /** Giant-fiber membrane potential (mV) at each tick, right and left, for the overlay. */
   readonly gfVoltage: { right: number[]; left: number[] } = { right: [], left: [] };
+  /** Swatter growth rate (deg/ms) fed to the engine on the latest tick, and the engine behind it, for the population panel. */
+  lastRate = 0;
+  /** ms of each neuron's latest spike so far (-Infinity if none), for the population panel. */
+  readonly lastSpikeMs: Float64Array;
+  get engine(): FlyBrain { return this.brain; }
 
   private brain: FlyBrain;
   private cfg: Config;
@@ -195,6 +200,7 @@ export class Round {
       y: (r() - 0.5) * cfg.arenaMm.h * 0.6,
       heading: r() * 2 * Math.PI,
     };
+    this.lastSpikeMs = new Float64Array(brain.manifest.neurons).fill(-Infinity);
     this.roleSets = { gf: new Set(brain.manifest.roles.gf), par: new Set(brain.manifest.roles.parallel) };
     const side = (s: string) => brain.manifest.roles.gf[brain.manifest.roles.target_side.indexOf(s)];
     this.gfIndex = { right: side("R"), left: side("L") }; // target_side is aligned with gf first
@@ -251,6 +257,7 @@ export class Round {
     const view = eyeView(this.fly, this.swatter, c);
     this.thetaDeg.push(view.thetaDeg);
     const rate = Math.max(0, growthRate(this.fly, this.swatter, vel, c));
+    this.lastRate = rate;
     const frame: Frame = [rate, view.right[0], view.right[1], view.left[0], view.left[1]];
     if (impactMs !== null) {
       // the swatter lands between ticks: the last frame covers only the time up to the landing
@@ -294,6 +301,7 @@ export class Round {
       this.seenSpikes = n;
       for (const [s, j] of this.brain.spikes()) {
         const ms = s * this.brain.dtMs;
+        if (ms > this.lastSpikeMs[j]) this.lastSpikeMs[j] = ms;
         if (this.roleSets.gf.has(j) && (this.tGf === null || ms < this.tGf)) this.tGf = ms;
         if (this.roleSets.par.has(j) && (this.tPar === null || ms < this.tPar)) this.tPar = ms;
       }

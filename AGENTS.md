@@ -38,7 +38,7 @@ Rust/WASM engine built (`engine/`, `web/brain/engine.wasm`, tested via `offline/
 Game world model + round sim in `web/game/world.ts` (tests: `cd web && npm test`; skill curves: `node game/difficulty.ts`); defaults deviate from the plan on purpose, see `docs/game.md`.
 A playable Classic round runs in a browser (`web/index.html`, `npm run build`, `web/browser_check.sh` for headless Chrome checks).
 Streak and Lab modes (`web/lab/`) and the leaderboard re-sim server (`server/`, Node; `npm test` in `web/` runs all Node tests; `npx tsc -p .` type-checks) exist; see docs/game.md.
-Not started: the plan's full overlay panels (hex eye heatmaps, population panels), sound, touch, human playtest. The optic-lobe `malecns` backend is deliberately not
+The overlay's population panel (hex eyes, LPLC2, escape DNs) is `web/game/overlay.ts`. Not started: sound, a real touch layout, human playtest. The optic-lobe `malecns` backend is deliberately not
 built (`docs/optic_lobe.md`).
 
 **This host, `dgxa100`, is the DGX.** No ssh hop and no `scripts/dgx.sh`: run

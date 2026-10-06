@@ -4,11 +4,13 @@ import { FlyBrain, type Manifest } from "../engine/brain.ts";
 import { CONFIG, Round, simulateRound, type Card, type Input } from "./world.ts";
 import { encodeTrace, nextSeed, quantise, runSeeds, rulesFor } from "./trace.ts";
 import { Lab } from "../lab/ui.ts";
+import { drawPopulation } from "./overlay.ts";
 
 const arena = document.getElementById("arena") as HTMLCanvasElement;
 const overlay = document.getElementById("overlay") as HTMLCanvasElement;
 const ctx = arena.getContext("2d")!;
 const octx = overlay.getContext("2d")!;
+const pop = document.getElementById("pop") as HTMLCanvasElement;
 const SCALE = arena.width / CONFIG.arenaMm.w; // px per mm
 const FLY_SPRITE_SCALE = 8; // a 2.5 mm fly is 4 px at this scale; the sprite is drawn larger, the hit test is not
 const CLASSIC_SWATS = 20;
@@ -160,6 +162,8 @@ async function main(): Promise<void> {
   arena.addEventListener("pointermove", cursorToMm);
   arena.addEventListener("pointerdown", (e) => { cursorToMm(e); input.down = true; arena.setPointerCapture(e.pointerId); });
   arena.addEventListener("pointerup", () => { input.down = false; });
+  arena.addEventListener("pointercancel", () => { input.down = false; });
+  arena.addEventListener("contextmenu", (e) => e.preventDefault()); // a long press on touch must charge, not open a menu
 
   async function startClassicRun(): Promise<void> {
     swats = 0; hits = 0; log = []; run = null;
@@ -181,7 +185,7 @@ async function main(): Promise<void> {
     for (const t of document.querySelectorAll<HTMLElement>("[data-mode]")) t.setAttribute("aria-pressed", String(t.dataset.mode === m));
     const isLab = m === "lab";
     $("labpanel").hidden = !isLab;
-    for (const id of ["stats", "card", "brainpanel", "board"]) $(id).hidden = isLab;
+    for (const id of ["stats", "card", "brainpanel", "poppanel", "board"]) $(id).hidden = isLab;
     $("sub").textContent = isLab
       ? "Lab: fire the standard stimuli at a tethered fly and check the circuit's response yourself."
       : "Swat the fly. Its escape reflex is wired from a real fly connectome. Move the mouse to hover the swatter; hold the button to charge, release to strike.";
@@ -267,7 +271,7 @@ async function main(): Promise<void> {
       // slow motion: one 5 ms tick every 20 ms of wall time, i.e. 0.25x
       while (acc >= 20 && replaying.round.phase !== "done") { acc -= 20; replaying.round.tick(replaying.trace[Math.min(replaying.i++, replaying.trace.length - 1)]); }
       if (replaying.round.phase === "done") acc = 0;
-      drawArena(replaying.round, input, true); drawOverlay(replaying.round);
+      drawArena(replaying.round, input, true); drawOverlay(replaying.round); drawPopulation(pop, replaying.round);
     } else {
       const over = mode === "classic" ? swats >= CLASSIC_SWATS : streakEnded;
       while (!over && acc >= CONFIG.tickMs && round.phase !== "done") {
@@ -278,7 +282,7 @@ async function main(): Promise<void> {
         if ((round.phase as string) === "done") finished(); // tick() moves the phase; TypeScript cannot see that
       }
       if ((round.phase as string) === "done" || over) acc = 0;
-      drawArena(round, input); drawOverlay(round);
+      drawArena(round, input); drawOverlay(round); drawPopulation(pop, round);
     }
     requestAnimationFrame(frame);
   }
@@ -298,7 +302,7 @@ async function main(): Promise<void> {
     const r = simulateRound(brain, s, tr);
     seed = s; round = r; trace = tr; swats = 1; hits = r.card!.outcome === "hit" ? 1 : 0;
     document.getElementById("n")!.textContent = `1 / ${CLASSIC_SWATS}`; document.getElementById("hits")!.textContent = String(hits);
-    showCard(r.card!, s); drawArena(r, input); drawOverlay(r);
+    showCard(r.card!, s); drawArena(r, input); drawOverlay(r); drawPopulation(pop, r);
     (window as unknown as { __swatterDemo: unknown }).__swatterDemo = r.card;
     document.title = `SWATTER demo ${demo}: ${r.card!.outcome}`;
   }

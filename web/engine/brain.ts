@@ -12,6 +12,7 @@ export interface Manifest {
   drive: { rf_sigma_deg: number };
   roles: { gf: number[]; parallel: number[]; target_side: string[]; short_window_ms: number };
   provenance?: Record<string, unknown>;
+  neuron_type?: string[];
 }
 
 /** One 5 ms frame: swatter growth rate (deg/ms) and its position on each eye's plane (deg). */
@@ -48,10 +49,18 @@ const ARRAYS = ["csr_indptr", "csr_post", "csr_weight_mv", "drive_neuron", "driv
 export class FlyBrain {
   readonly dtMs: number;
   readonly manifest: Manifest;
+  /** The driven LPLC2 neurons: graph index, receptive-field centre (deg, on the eye plane) and eye (0 right, 1 left). For drawing only. */
+  readonly drive: { neuron: Uint16Array; rf: Float32Array; eye: Uint8Array };
   private x: Exports;
   // explicit fields, not constructor parameter properties: those are not erasable syntax
-  private constructor(x: Exports, manifest: Manifest) {
+  private constructor(x: Exports, manifest: Manifest, brainBin: ArrayBuffer) {
     this.x = x;
+    const a = manifest.arrays, m = a["drive_neuron"].shape[0];
+    this.drive = {
+      neuron: new Uint16Array(brainBin.slice(a["drive_neuron"].offset, a["drive_neuron"].offset + 2 * m)),
+      rf: new Float32Array(brainBin.slice(a["drive_rf_deg"].offset, a["drive_rf_deg"].offset + 8 * m)),
+      eye: new Uint8Array(brainBin.slice(a["drive_eye"].offset, a["drive_eye"].offset + m)),
+    };
     this.manifest = manifest;
     this.dtMs = manifest.lif["dt_ms"];
   }
@@ -76,7 +85,7 @@ export class FlyBrain {
     const pParams = put(new Uint8Array(params.buffer));
     x.init(manifest.neurons, manifest.edges, manifest.arrays["drive_neuron"].shape[0], ptr["csr_indptr"], ptr["csr_post"],
       ptr["csr_weight_mv"], ptr["drive_neuron"], ptr["drive_rf_deg"], ptr["drive_eye"], pParams);
-    return new FlyBrain(x, manifest);
+    return new FlyBrain(x, manifest, brainBin);
   }
 
   reset(): void { this.x.reset(); }

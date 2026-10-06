@@ -4,8 +4,8 @@ Status: the world model, a deterministic round simulator and a skill analysis ex
 under Node against the real engine. A browser page (`web/index.html`) has three modes: **Classic** (20 swats,
 score = hits, submittable to the leaderboard), **Streak** and **Lab**; plus the post-round card, a live
 giant-fiber/angular-size overlay and slow replay. A Node leaderboard server replays submitted runs
-(`server/`, below). Not done: sound, touch handling, the hexagonal eye heatmaps and LPLC2/DN population
-panels of the plan's overlay, a pixel scale tuned by play, any human playtest.
+(`server/`, below). The overlay has the plan's population panel (below). Not done: sound, a pixel scale tuned
+by play, a touch layout beyond tap-and-hold, any human playtest.
 
 ## The finding that shaped the rules
 
@@ -88,6 +88,26 @@ the swatter's angular size) and the slow replay (0.25x, re-simulated from the tr
 ![hit](figures/game_hit.png)
 ![escaped](figures/game_escape.png)
 ![spooked](figures/game_spook.png)
+
+## The population panel (`web/game/overlay.ts`)
+
+![population panel](figures/game_population.png)
+
+Two hexagonal discs, one per eye, and a row of escape-neuron bars, drawn from the live engine every frame.
+
+- **Eyes.** Hex lattice points on each eye's plane out to 120 degrees from the eye's axis, dark where the
+  swatter's disc covers them. This is **geometry**, not a neural response: the optic lobe is not run
+  (`docs/week1_gate.md`), and the panel says so. The plan's panel was meant to show what each eye sees; it is as
+  close to that as an offline optic lobe allows.
+- **LPLC2.** One ring per driven LPLC2 neuron at its receptive-field centre (`brain.bin`'s `drive_rf_deg`),
+  brighter with membrane potential and red for 15 ms after a spike. Rings outside 120 degrees are not drawn.
+- **Escape neurons.** One bar per giant fiber and parallel DN, labelled by type and side, voltage from the
+  engine (red for 15 ms after a spike).
+
+The panel only reads engine state (`Round.engine`, `Round.lastSpikeMs`), so it cannot change a round, and the
+server replay is unaffected. Touch: a finger down both positions the swatter and starts the charge, release
+strikes; there is no hover on a touch screen, so touch play is tap-and-hold rather than the mouse's
+hover-then-charge. Untested on a real device.
 
 ## Streak, Lab and the leaderboard
 
