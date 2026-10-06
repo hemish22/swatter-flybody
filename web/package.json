@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test \"engine/*.test.ts\" \"game/*.test.ts\"",
+    "test": "node --test \"engine/*.test.ts\" \"game/*.test.ts\" \"lab/*.test.ts\" \"../server/*.test.ts\"",
     "build": "esbuild engine/browser_parity.ts game/main.ts --bundle --format=esm --outdir=dist --target=es2022"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2"
+    "@types/node": "^24.19.1",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
   }
 }

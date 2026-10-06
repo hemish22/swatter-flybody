@@ -37,8 +37,8 @@ Export + Python reference engine (`offline/export.py`, `offline/engine_ref.py`, 
 Rust/WASM engine built (`engine/`, `web/brain/engine.wasm`, tested via `offline/wasm_host.py` + wasmtime). Rust lives in ~/.cargo (`export PATH=$HOME/.cargo/bin:$PATH`); Node is in ~/.local/node (`export PATH=$HOME/.local/node/bin:$PATH`; `cd web && npm test` runs the TypeScript parity test).
 Game world model + round sim in `web/game/world.ts` (tests: `cd web && npm test`; skill curves: `node game/difficulty.ts`); defaults deviate from the plan on purpose, see `docs/game.md`.
 A playable Classic round runs in a browser (`web/index.html`, `npm run build`, `web/browser_check.sh` for headless Chrome checks).
-Not started: Streak and Lab modes, the plan's full overlay panels,
-`engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately not
+Streak and Lab modes (`web/lab/`) and the leaderboard re-sim server (`server/`, Node; `npm test` in `web/` runs all Node tests; `npx tsc -p .` type-checks) exist; see docs/game.md.
+Not started: the plan's full overlay panels (hex eye heatmaps, population panels), sound, touch, human playtest. The optic-lobe `malecns` backend is deliberately not
 built (`docs/optic_lobe.md`).
 
 **This host, `dgxa100`, is the DGX.** No ssh hop and no `scripts/dgx.sh`: run

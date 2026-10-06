@@ -21,20 +21,32 @@
   button:hover { border-color: var(--accent); } button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .outcome { font-size: 20px; font-weight: 700; } .hit { color: var(--good); } .escaped, .spooked { color: var(--warn); } .miss, .timeout { color: var(--muted); }
   .note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .tabs { display: flex; gap: 8px; margin: 0 0 10px; } .tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  [hidden] { display: none !important; }
+  select, input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--muted); border-radius: 6px; padding: 3px 6px; }
+  #name { width: 10em; }
 </style>
 <main>
   <section>
     <h1>SWATTER</h1>
-    <p class="sub">Swat the fly. Its escape reflex is wired from a real fly connectome. Move the mouse to hover the swatter; <b>hold the button to charge, release to strike</b>.</p>
+    <nav class="tabs" aria-label="Mode">
+      <button data-mode="classic" aria-pressed="true">Classic</button>
+      <button data-mode="streak" aria-pressed="false">Streak</button>
+      <button data-mode="lab" aria-pressed="false">Lab</button>
+    </nav>
+    <p class="sub" id="sub"></p>
     <canvas id="arena" width="900" height="600" aria-label="Top-down view of the table, the fly and the swatter"></canvas>
+    <p class="note" id="mode-note"></p>
   </section>
   <aside>
-    <div class="panel"><h2>Classic</h2><table><tr><td>Swats</td><td id="n">0 / 20</td></tr><tr><td>Hits</td><td id="hits">0</td></tr></table></div>
+    <div class="panel" id="labpanel" hidden></div>
+    <div class="panel" id="stats"><h2 id="stats-title">Classic</h2><table id="stats-rows"></table><div id="submit"></div></div>
     <div class="panel" id="card"><h2>Last swat</h2><div class="note">No swat yet.</div></div>
-    <div class="panel"><h2>Fly's brain, live</h2>
+    <div class="panel" id="brainpanel"><h2>Fly's brain, live</h2>
       <canvas id="overlay" width="300" height="210" aria-label="Giant fiber membrane voltage and swatter angular size over time"></canvas>
       <div class="note">Solid: right giant fiber, dashed: left, dotted line: spike threshold. Grey: the swatter's angular size in the fly's eye.</div>
     </div>
+    <div class="panel" id="board"><h2>Leaderboard (verified runs)</h2><table id="board-rows"></table></div>
     <div class="panel"><div class="note"><b>What is real here.</b> The escape circuit is the connectome (MaleCNS v1.0) wired as a leaky integrate-and-fire network. The loom detector that feeds it is a model component we supplied, not something the fly's visual system was shown to do (see docs/validation.md). The model also fails to reproduce the published trend of takeoff mode with loom speed (docs/validation.md).</div></div>
   </aside>
 </main>

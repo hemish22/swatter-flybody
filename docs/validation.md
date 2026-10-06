@@ -31,7 +31,7 @@ that the fly's visual system discriminates. The game UI has to say the same.
   r/v at every one of the 206 settings that pass criterion 1. No published curve
   is overlaid: whether the real GF threshold angle rises with r/v has not been
   checked against the papers, so do not read this as agreement or disagreement.
-- **Plot 2.** Expanding: GF spike in every trial at every r/v; receding,
+- **Plot 2.** Expanding: GF spike in every trial at every r/v (over the directions tested; straight ahead and straight behind at r/v 10 do not spike within the 400 ms, see the Lab table in `docs/game.md`); receding,
   translating and dimming: none. Selective by construction (above).
 - **Plot 3.** Every escape is short-mode at every r/v, train and held-out. The
   plan's trend (short fraction rising as r/v falls) is not reproduced and the

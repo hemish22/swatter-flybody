@@ -11,6 +11,7 @@ export interface Manifest {
   lif: Record<string, number>;
   drive: { rf_sigma_deg: number };
   roles: { gf: number[]; parallel: number[]; target_side: string[]; short_window_ms: number };
+  provenance?: Record<string, unknown>;
 }
 
 /** One 5 ms frame: swatter growth rate (deg/ms) and its position on each eye's plane (deg). */

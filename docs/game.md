@@ -1,10 +1,11 @@
 # Game world model (web/game) and what the frozen brain does to it
 
 Status: the world model, a deterministic round simulator and a skill analysis exist and are tested
-under Node against the real engine, and a playable Classic round runs in a browser (`web/index.html`):
-Canvas2D arena, mouse hover and hold-to-charge, post-round card, live giant-fiber/angular-size overlay,
-slow replay. Not done: Streak and Lab modes, the leaderboard, sound, touch handling, the hexagonal eye
-heatmaps and LPLC2/DN population panels of the plan's overlay, a pixel scale tuned by play.
+under Node against the real engine. A browser page (`web/index.html`) has three modes: **Classic** (20 swats,
+score = hits, submittable to the leaderboard), **Streak** and **Lab**; plus the post-round card, a live
+giant-fiber/angular-size overlay and slow replay. A Node leaderboard server replays submitted runs
+(`server/`, below). Not done: sound, touch handling, the hexagonal eye heatmaps and LPLC2/DN population
+panels of the plan's overlay, a pixel scale tuned by play, any human playtest.
 
 ## The finding that shaped the rules
 
@@ -87,6 +88,60 @@ the swatter's angular size) and the slow replay (0.25x, re-simulated from the tr
 ![hit](figures/game_hit.png)
 ![escaped](figures/game_escape.png)
 ![spooked](figures/game_spook.png)
+
+## Streak, Lab and the leaderboard
+
+**Streak.** Play until three swats in a row fail to hit. "Fail to hit" is escaped, spooked, missed or timed
+out: the plan says "until the fly escapes three times in a row" and has no rule for a swat that lands
+elsewhere, so a miss counts against you (a decision, easy to change in `main.ts`). Score = hits; the best is kept
+in `localStorage` only (per browser, never submitted).
+
+**Lab** (`web/lab/`). A tethered fly: pick expanding, receding, translating or dimming, r/v from 10 to 80 ms,
+and one of eight directions, then Fire, or run the standard sweep (4 r/v × 8 directions × 4 kinds = 128
+trials, about a second). The frames are made by the TypeScript port of `offline/loom.py` and
+`offline/heading.py`, and `web/lab/lab.test.ts` pins them to the 50 parity vectors the Python reference
+made (frames equal to 1e-6, outcomes equal to the reference). The plot builds live: angle at the first giant-fiber
+spike against r/v, and the per-kind tally of giant-fiber spikes (criterion 1: 0 for receding, translating,
+dimming). From the engine itself, the median angle at the first giant-fiber spike for r/v 10 / 20 / 40 / 80
+over six lateral and diagonal directions is 6.6 / 8.6 / 12.4 / 20.1 degrees (the validation doc's 7.8 / 10.2
+/ 13.2 / 20.6 used a different set of eight azimuths, see below).
+One thing the full sweep shows that the validation doc's tables did not spell out: **straight ahead and straight
+behind are the model's weak directions** (the eyes are assumed to face sideways, so these sit at the edge of
+both fields), and at r/v 10 the disc has grown too little by the end of the 400 ms window for the giant fiber to
+spike from either. Giant-fiber first-spike times in ms, expanding disc, directions 0, 45, 90, 135, 180, 225, 270, 315:
+
+| r/v | 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | none | 327 | 317 | 303 | none | 278 | 306 | 298 |
+| 20 | 385 | 273 | 215 | 211 | 380 | 181 | 217 | 209 |
+| 40 | 344 | 167 | 111 | 134 | 317 | 67 | 98 | 89 |
+| 80 | 274 | 61 | 27 | 28 | 258 | 27 | 26 | 31 |
+
+So "the giant fiber spikes for every expanding trial" in `docs/validation.md` holds for the lateral and
+diagonal directions it tested, not for every direction at every speed.
+
+**Leaderboard** (`server/`, Node, `node server/server.ts [--port 8080] [--db file.sqlite]`; it also serves
+`web/`). The plan says FastAPI + SQLite with the re-sim in Node; this is all Node (`node:sqlite`) so the
+verifier is literally the browser's game code and there is no Python-to-Node bridge. Flow:
+
+1. `GET /api/run` issues a seed; the 20 swats' seeds are a fixed chain from it (`runSeeds`), so a player cannot
+   choose their flies.
+2. The page records each swat's cursor trace (quantised to 0.1 mm, one input per 5 ms tick) and the card it saw.
+3. `POST /api/submit` sends the traces and claimed outcome, mode and heading side per swat. The server replays
+   each with `simulateRound` on the same WASM engine and accepts only if every claim matches. The stored score
+   is the replay's. A run id is single-use (a failed submission spends it), expires after two hours, and the
+   request is refused if the page's rules id (hash of `CONFIG` and the brain's provenance) differs from the server's.
+4. `GET /api/leaderboard` lists accepted runs, hits then earliest.
+
+Tests (`server/verify.test.ts`, 7): an honest run verifies; a wrong claim, a wrong seed, a moved trace, wrong swat
+count, padded, truncated, out-of-arena and junk traces are refused; verification is deterministic and takes
+about 250 ms for 20 swats; the HTTP flow including double-submit and path traversal.
+
+What this does not do, and is not claimed to: it cannot tell a human from a script that sends plausible cursor
+traces. It proves the claimed outcome follows from the trace under the real rules, nothing more. The browser and
+the server both run V8's `Math` functions today; another browser's `Math.exp`/`atan` could differ in the last
+bit, which could flip an outcome that sits on a knife edge, and that is untested. Verification runs on the main
+thread and bounds a run to 80,000 ticks (about 5 s worst case), fine for a small launch and not for a flood.
 
 ## Limits to keep in mind
 
