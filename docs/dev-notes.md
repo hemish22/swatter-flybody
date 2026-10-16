@@ -1,4 +1,6 @@
-# SWATTER
+# Developer notes
+
+The running status log, DGX workflow, layout and setup notes. The project overview is in the [README](../README.md).
 
 A browser game where the fruit fly's escape reflex is the opponent.
 
@@ -7,8 +9,8 @@ decides when and where it jumps, and its reflexes beat yours. The escape decisio
 comes out of a LIF simulation of MaleCNS neurons; the UI shows which neurons
 fired. The body animation only plays back what the neurons already decided.
 
-Full design, criteria and timeline: `docs/build-plan.md`.
-Progress notes: [`docs/week0_status.md`](docs/week0_status.md).
+Full design, criteria and timeline: [`build-plan.md`](build-plan.md).
+Progress notes: [`week0_status.md`](week0_status.md).
 
 ## Status
 
@@ -30,7 +32,7 @@ comes from the connectome-wired LIF circuit (`offline/lif.py`,
 expanding trial and no control, at 31 of 60 parameter settings.
 
 Held-out fit done, provisional (`docs/lif_fit.md`); criterion 3 fails and criterion 4 is met
-(`docs/heading.md`). Validation v1 done (`docs/validation.md`). Export and a Python reference engine done, parity on 50 stimuli (`docs/engine.md`). The Rust/WASM engine (`engine/`) is built and matches the reference on all 50 parity stimuli, 19x faster than real time under wasmtime and 59x in Node, where the TypeScript glue passes the same parity set (`web/`); runs in headless Chrome (parity 50 of 50). A deterministic world model and round simulator (`web/game/`, `docs/game.md`) run on the real engine; with the plan's rules no strike can land (the fly reacts in 11 to 25 ms), so the defaults are a 40 mm hover and hold-to-charge strikes, my decision and easy to reverse. The browser page has Classic, Streak and Lab modes and a Node leaderboard server that replays submitted runs with the same game code and engine (`server/`, `docs/game.md`). The overlay has hexagonal eye discs, LPLC2 and escape-neuron panels. Not done: sound, a real touch layout, any human playtest.
+(`docs/heading.md`). Validation v1 done (`docs/validation.md`). Export and a Python reference engine done, parity on 50 stimuli (`docs/engine.md`). The Rust/WASM engine (`engine/`) is built and matches the reference on all 50 parity stimuli, 19x faster than real time under wasmtime and 59x in Node, where the TypeScript glue passes the same parity set (`web/`); runs in headless Chrome (parity 50 of 50). A deterministic world model and round simulator (`web/game/`, `docs/game.md`) run on the real engine; with the plan's rules no strike can land (the fly reacts in 11 to 25 ms), so the defaults are a 40 mm hover and hold-to-charge strikes, my decision and easy to reverse. The browser page has Classic, Streak and Lab modes and a Node leaderboard server that replays submitted runs with the same game code and engine (`server/`, `docs/game.md`). The overlay has hexagonal eye discs, LPLC2 and escape-neuron panels. On Oct 6 the page became a 3D stage (three.js) with a live circuit diagram, a four-step account of what the brain did, and automatic slow-motion replays (`docs/game.md`). Sound is in (synthesised, with an on/off button). `cd web && npm run build:site` makes a static folder to publish (`docs/game.md`). Not done: a real touch layout, any human playtest.
 
 ## Heavy work runs on the DGX
 
