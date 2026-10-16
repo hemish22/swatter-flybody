@@ -19,19 +19,29 @@ export function hexLattice(radius: number, step: number): Array<[number, number]
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * Math.max(0, Math.min(1, t));
 
+/** Logical drawing size; the canvas is scaled to its CSS width, so the same picture stays sharp at any size. */
+const LW = 360, LH = 330;
+
 export function drawPopulation(canvas: HTMLCanvasElement, round: Round): void {
-  const g = canvas.getContext("2d")!, W = canvas.width, H = canvas.height;
-  g.clearRect(0, 0, W, H);
+  const cssW = canvas.clientWidth;
+  if (cssW === 0) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1), pw = Math.round(cssW * dpr), ph = Math.round((pw * LH) / LW);
+  if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
+  const g = canvas.getContext("2d")!;
+  g.setTransform(pw / LW, 0, 0, pw / LW, 0, 0);
+  g.clearRect(0, 0, LW, LH);
+  const W = LW;
   const brain = round.engine, m = brain.manifest, lif = m.lif;
   const view = eyeView(round.fly, round.swatter);
   const nowMs = round.timeMs;
-  const R = 80, step = 8, cy = 92, cx = [W / 4 + 2, (3 * W) / 4 - 2];
+  const R = 76, step = 8, cy = 84, cx = [W / 4 + 2, (3 * W) / 4 - 2];
   const lattice = hexLattice(R, step);
   const px = (deg: number) => (deg / ECC_MAX) * R; // plane degrees to pixels
-  g.font = "10px system-ui"; g.textAlign = "center";
+  const ink = "#e5eeee", muted = "#8ea3a6", pink = "#ff4fa3", cyan = "#4fe3d1", amber = "#f0a95b";
+  g.textAlign = "center";
 
-  // --- two eyes: the swatter's footprint on the lattice (dark = covered), LPLC2 receptive fields on top
-  const pos = [view.right, view.left], names = ["right eye", "left eye"];
+  // --- two eyes: the swatter's footprint on the lattice (pink = covered), LPLC2 receptive fields on top
+  const pos = [view.right, view.left], names = ["Right eye", "Left eye"];
   for (let e = 0; e < 2; e++) {
     const [ox, oy] = [cx[e], cy];
     const [sx, sy] = pos[e];
@@ -39,11 +49,11 @@ export function drawPopulation(canvas: HTMLCanvasElement, round: Round): void {
     for (const [lx, ly] of lattice) {
       const dx = (lx / R) * ECC_MAX - sx, dy = (-ly / R) * ECC_MAX - sy; // plane y is up, screen y down
       const covered = Math.hypot(dx, dy) <= half;
-      g.fillStyle = covered ? "#2a2c31" : css("--panel") === "#fff" ? "#ece9e1" : "#32353c";
-      g.beginPath(); g.arc(ox + lx, oy + ly, step * 0.42, 0, 7); g.fill();
+      g.fillStyle = covered ? "#ff7fbf" : "#2d4a50";
+      g.beginPath(); g.arc(ox + lx, oy + ly, step * (covered ? 0.46 : 0.38), 0, 7); g.fill();
     }
-    g.strokeStyle = css("--muted"); g.lineWidth = 1; g.globalAlpha = 0.5;
-    g.beginPath(); g.arc(ox, oy, R, 0, 7); g.stroke(); g.globalAlpha = 1;
+    g.strokeStyle = "#5b8089"; g.lineWidth = 1.2;
+    g.beginPath(); g.arc(ox, oy, R, 0, 7); g.stroke();
     // LPLC2 neurons of this eye: ring at the receptive-field centre, filled by membrane potential
     const d = brain.drive;
     for (let i = 0; i < d.neuron.length; i++) {
@@ -53,32 +63,43 @@ export function drawPopulation(canvas: HTMLCanvasElement, round: Round): void {
       const v = brain.voltage(d.neuron[i]);
       const level = (v - lif["v_rst"]) / (lif["v_th"] - lif["v_rst"]);
       const fired = nowMs - round.lastSpikeMs[d.neuron[i]] < 15;
-      g.fillStyle = fired ? css("--bad") : `rgba(240,160,75,${lerp(0.08, 0.95, level)})`;
-      g.strokeStyle = css("--warn"); g.lineWidth = 1;
-      g.beginPath(); g.arc(ox + px(rx), oy - px(ry), 2.6, 0, 7); g.fill(); g.stroke();
+      const x = ox + px(rx), y = oy - px(ry);
+      if (fired) { g.fillStyle = "rgba(255,79,163,.45)"; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); }
+      g.fillStyle = fired ? "#ffffff" : `rgba(240,169,91,${lerp(0.05, 1, level)})`;
+      g.strokeStyle = fired ? pink : amber; g.lineWidth = 1.4;
+      g.beginPath(); g.arc(x, y, 3.3, 0, 7); g.fill(); g.stroke();
     }
-    g.fillStyle = css("--muted");
-    g.fillText(names[e], ox, oy + R + 12);
+    g.fillStyle = ink; g.font = "600 13px system-ui, sans-serif";
+    g.fillText(names[e], ox, oy + R + 17);
   }
-  g.fillStyle = css("--muted");
-  g.fillText("dark: the swatter's footprint (geometry, not a neural response)", W / 2, cy + R + 26);
-  g.fillText("rings: LPLC2 neurons, brighter = higher voltage, red = spiking", W / 2, cy + R + 38);
 
-  // --- the escape neurons: giant fibers and the parallel DNs, voltage as a bar, red when spiking
+  // --- the escape neurons: giant fibers and the parallel DNs, voltage as a bar, pink when spiking
   const roles = m.roles, ids = [...roles.gf, ...roles.parallel], kinds = m.neuron_type ?? [];
-  const top = cy + R + 66, bw = Math.min(26, (W - 20) / ids.length - 4);
-  g.textAlign = "center";
+  const top = cy + R + 50, bw = Math.min(24, (W - 24) / ids.length - 6), h = 62, slot = (W - 24) / ids.length;
+  g.font = "600 12px system-ui, sans-serif"; g.textAlign = "left"; g.fillStyle = ink;
+  g.fillText("Escape neurons: bar = voltage", 12, top - 10);
+  g.font = "11.5px system-ui, sans-serif"; g.textAlign = "center";
   ids.forEach((j, k) => {
-    const x = 10 + k * ((W - 20) / ids.length) + bw / 2, h = 56;
+    const x = 12 + k * slot + slot / 2;
     const level = (brain.voltage(j) - lif["v_rst"]) / (lif["v_th"] - lif["v_rst"]);
     const fired = nowMs - round.lastSpikeMs[j] < 15;
-    g.strokeStyle = css("--muted"); g.lineWidth = 1; g.strokeRect(x - bw / 2, top, bw, h);
-    g.fillStyle = fired ? css("--bad") : css("--accent");
+    g.fillStyle = "#0d171a"; g.fillRect(x - bw / 2, top, bw, h);
     const fh = Math.max(0, Math.min(1, level)) * h;
+    g.fillStyle = fired ? pink : cyan;
     g.fillRect(x - bw / 2, top + h - fh, bw, fh);
-    g.fillStyle = css("--muted");
-    const label = (kinds[j] ?? "?").replace("DNp", "") + roles.target_side[k];
-    g.fillText(label, x, top + h + 11);
+    g.strokeStyle = fired ? pink : "#5b8089"; g.lineWidth = 1.2; g.strokeRect(x - bw / 2, top, bw, h);
+    g.fillStyle = fired ? "#fff" : muted;
+    g.fillText((kinds[j] ?? "?").replace("DNp", "") + roles.target_side[k], x, top + h + 13);
   });
-  g.textAlign = "left"; g.fillText("escape neurons (DNp): bar = voltage, red = spiking", 10, top - 6);
+  // which bars are the giant fibers
+  const nGf = roles.gf.length;
+  if (nGf > 0 && nGf < ids.length) {
+    const bracket = (from: number, to: number, label: string) => {
+      const x0 = 12 + from * slot + 3, x1 = 12 + to * slot - 3, y = top + h + 22;
+      g.strokeStyle = "#35565b"; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+      g.fillStyle = muted; g.font = "11px system-ui, sans-serif"; g.fillText(label, (x0 + x1) / 2, y + 13);
+    };
+    bracket(0, nGf, "giant fibers");
+    bracket(nGf, ids.length, "parallel escape neurons");
+  }
 }

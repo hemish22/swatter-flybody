@@ -78,18 +78,57 @@ Dead ahead is the fly's blind spot in this model, ten times more forgiving than 
 the lateral eye-axis assumption (front and back sit at the edge of both eyes' fields), so it is a prediction of
 the model as built, not something measured in flies.
 
+## Publishing it (static, no leaderboard)
+
+`cd web && npm run build:site` writes `web/site/` (1.5 MB: `index.html`, the bundle, and `brain/` without the test file).
+Upload that folder to any static host: Cloudflare Pages or Netlify (drag and drop the folder), or GitHub Pages
+(`.nojekyll` is included). All paths are relative, so a subpath such as `user.github.io/swatter/` works. There is no
+server: the page finds no `api/run`, says "Classic: 20 swats, your score is the number of hits", and hides the
+leaderboard card. The leaderboard server (`server/`) is still there for anyone who wants it, and when it is running the
+page uses it as before. HTTPS is needed only for sound to start reliably on some browsers; every static host gives it.
+
 ## The page
 
-`cd web && npm run build`, serve `web/` over HTTP (the engine is fetched), open `index.html`.
+`cd web && npm run build`, serve `web/` over HTTP (the engine is fetched), open `index.html`. The page needs WebGL.
 `web/browser_check.sh` runs the 50-stimulus parity set and three scripted rounds (`?demo=hit|escape|spook`)
-in headless Chrome. The card, the overlay (GF voltage, solid right and dashed left, with the threshold, plus
-the swatter's angular size) and the slow replay (0.25x, re-simulated from the trace) all come from `Round`.
+in headless Chrome (software WebGL), plus a ranked run against the real server.
+
+The page was redesigned on Oct 6 so a visitor can see what the fly's brain is doing. Rendering only: `world.ts`,
+the engine and the server's replay are untouched, and nothing drawn is read back by the rules.
+
+- **3D stage** (`web/game/scene3d.ts`, `flymodel.ts`, three.js). A table, a perforated swatter that casts a shadow, and a
+  procedural fly built from primitives (no mesh asset). The pink disc on the table is the exact footprint that decides a
+  hit, and the charge ring fills around it. A small inset (bottom right) shows what the fly's eye sees, aimed at the swatter. After a takeoff the fly stays airborne
+  (it climbs at the push-off speed, then hovers and beats its wings) and a pink dotted trail marks its path, so a
+  takeoff is readable in a still frame. The round ends at the instant the fly leaves, so the scene keeps playing after
+  it at 0.35x (rendering only), and the result banner for an escape or a spook waits until the fly is airborne. The pointer
+  is ray-cast onto the plane the swatter hovers in, so the same millimetre coordinates reach the rules as before.
+- **Layout (Oct 12).** The table and the brain are two equal panels, side by side and the same height, so neither is
+  the sidebar. The brain panel holds the live circuit, its counters and the giant-fiber voltage strip. Scores and the
+  swat result sit under both, the four-step account runs as a strip below that, then the eye panel, leaderboard and the
+  "what is real" note. On a phone the table comes first.
+- **What its brain does** (`story.ts`). Four steps light up as the engine produces them: the swatter grows, LPLC2 detectors
+  fire, the giant fiber crosses threshold, takeoff (mode, side, and the reaction time from first growth). The second step
+  carries the reminder that the detector's input is supplied by us. Steps that never happen stay grey, so a long-mode
+  takeoff visibly has no giant-fiber spike.
+- **The fly's brain, live** (`circuit.ts`). The real 495-neuron escape graph: 620 strongest connections, dot brightness
+  follows membrane voltage, a magenta bloom is a spike, and spikes travel along their connections. Neurons that fired
+  earlier in the round stay warm, so the pattern of the whole decision remains on screen. Counters show spikes this round,
+  neurons firing now, escape neurons firing and the giant fiber's voltage. The layout is a diagram, not anatomy (rows are
+  ordered by which side a relay leans toward).
+- **Slow-motion replay.** After each swat the last 300 ms replay at 0.1x from the recorded trace (the hover before it is
+  fast-forwarded), with the fly, the circuit and the steps all playing back; "Replay automatically" turns it off.
+- **The fly is an illustration.** It is drawn about 13 times life size. Its crouch follows the giant fiber's voltage and its
+  takeoff is the one the spikes decided (a push-off to the chosen side, or straight up when the model gives no side). It
+  never decides anything, and the page says so.
+- Screenshot URLs: `?demo=escape&after=110` freezes the scene that many simulated ms after the round ended, `&replay=1`
+  starts the slow-motion replay, `&eyes=1` opens the eye panel.
 
 ![hit](figures/game_hit.png)
 ![escaped](figures/game_escape.png)
 ![spooked](figures/game_spook.png)
 
-## The population panel (`web/game/overlay.ts`)
+## The population panel (`web/game/overlay.ts`, now under "What each eye sees" in the page's right column)
 
 ![population panel](figures/game_population.png)
 

@@ -5,12 +5,14 @@ set -euo pipefail
 cd "$(dirname "$0")"
 npm run build >/dev/null
 PORT=${PORT:-8765}
-(cd .. && node server/server.ts --port "$PORT" --db "${TMPDIR:-/tmp}/swatter-check-$$.sqlite") >/dev/null 2>&1 &
+(cd .. && exec node server/server.ts --port "$PORT" --db "${TMPDIR:-/tmp}/swatter-check-$$.sqlite") >/dev/null 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null || true' EXIT
 sleep 1
 CHROME=${CHROME:-google-chrome}
-run() { timeout 90 "$CHROME" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=20000 --dump-dom "$1" 2>/dev/null; }
+TO=$(command -v timeout || command -v gtimeout || true) # macOS has neither by default; the checks still run, just without a hang guard
+# the page is WebGL (three.js): headless Chrome needs the software renderer, not --disable-gpu
+run() { ${TO:+$TO 90} "$CHROME" --headless=new --no-sandbox --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist --virtual-time-budget=20000 --dump-dom "$1" 2>/dev/null; }
 parity=$(run "http://localhost:$PORT/parity.html" | grep -o '<pre id="result">[^<]*' | sed 's/<pre id="result">//')
 echo "parity: $parity"
 echo "$parity" | grep -q '"ok":true' || { echo "FAIL: in-browser parity"; exit 1; }

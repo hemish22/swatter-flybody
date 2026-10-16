@@ -117,7 +117,7 @@ export class Lab {
 
   private drawArena(now: number): void {
     const c = this.els.arena, g = c.getContext("2d")!, w = c.width, h = c.height;
-    g.fillStyle = css("--panel") === "#fff" ? "#d9d6cd" : "#3a3d44";
+    g.fillStyle = "#0f1a1e";
     g.fillRect(0, 0, w, h);
     const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.42;
     g.strokeStyle = "rgba(128,128,128,.25)"; g.lineWidth = 1;
@@ -126,14 +126,14 @@ export class Lab {
     g.fillText("ahead", cx, cy - R - 8); g.fillText("right", cx + R + 24, cy + 4); g.fillText("left", cx - R - 24, cy + 4); g.fillText("behind", cx, cy + R + 16);
     const p = this.playing;
     if (p) {
-      const t = Math.min(now - p.startMs, LAB.durationMs);
+      const t = Math.max(0, Math.min(now - p.startMs, LAB.durationMs));
       const i = Math.min(Math.floor(t / LAB.frameMs), p.r.thetaDeg.length - 1);
       const theta = p.r.thetaDeg[i];
       const az = (p.r.stimulus.azimuthDeg * Math.PI) / 180, half = (Math.min(theta, 179) * Math.PI) / 360;
       // screen angle: ahead is up, right is +x
       const a0 = -Math.PI / 2 + az - half, a1 = -Math.PI / 2 + az + half;
       const gone = p.r.gfFirstMs !== null && t >= p.r.gfFirstMs;
-      g.fillStyle = p.r.stimulus.kind === "dimming" ? `rgba(20,22,26,${Math.max(0.05, 0.78 * (1 - t / LAB.durationMs))})` : "rgba(20,22,26,.78)";
+      g.fillStyle = p.r.stimulus.kind === "dimming" ? `rgba(229,238,238,${Math.max(0.04, 0.34 * (1 - t / LAB.durationMs))})` : "rgba(229,238,238,.32)";
       g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, R, a0, a1); g.closePath(); g.fill();
       if (gone) { g.strokeStyle = css("--warn"); g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 30, 0, 7); g.stroke(); }
       g.fillStyle = css("--ink"); g.textAlign = "left"; g.font = "14px system-ui";
@@ -141,8 +141,8 @@ export class Lab {
       if (t >= LAB.durationMs && !gone) { g.fillStyle = css("--muted"); g.fillText("no giant-fiber spike", 14, h - 34); }
     }
     // the fly, forward is up
-    g.save(); g.translate(cx, cy); g.fillStyle = "#15161a";
+    g.save(); g.translate(cx, cy); g.fillStyle = "#b9772f";
     g.beginPath(); g.ellipse(0, 0, 9, 18, 0, 0, 7); g.fill();
-    g.fillStyle = "#5aa9ff"; g.beginPath(); g.arc(0, -17, 6, 0, 7); g.fill(); g.restore();
+    g.fillStyle = "#c0213a"; g.beginPath(); g.arc(0, -17, 6, 0, 7); g.fill(); g.restore();
   }
 }
