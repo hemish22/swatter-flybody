@@ -34,6 +34,9 @@ export interface Config {
   jumpDelayMs: number;
   raiseWindowMs: number;
   hoverTimeoutMs: number;
+  /** Lab ablation only (game/ablation_gf.ts): ignore the giant fibers' spikes, so the parallel DNs alone decide takeoff.
+   *  Left out of CONFIG on purpose, so the rules id the server checks is unchanged. */
+  silenceGf?: boolean;
 }
 
 export const CONFIG: Config = {
@@ -302,7 +305,7 @@ export class Round {
       for (const [s, j] of this.brain.spikes()) {
         const ms = s * this.brain.dtMs;
         if (ms > this.lastSpikeMs[j]) this.lastSpikeMs[j] = ms;
-        if (this.roleSets.gf.has(j) && (this.tGf === null || ms < this.tGf)) this.tGf = ms;
+        if (this.roleSets.gf.has(j) && !this.cfg.silenceGf && (this.tGf === null || ms < this.tGf)) this.tGf = ms;
         if (this.roleSets.par.has(j) && (this.tPar === null || ms < this.tPar)) this.tPar = ms;
       }
     }

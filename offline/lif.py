@@ -15,9 +15,12 @@ against), written for batches of trials on a GPU:
 
 Constants checked against the paper's Methods text (PMC11446845) on 2026-10-05:
 equations and every value above match (t_mbr = R_mbr x C_mbr = 10 kOhm cm^2 x
-2 uF/cm^2 = 20 ms). Still NOT checked against its Brian2 code (the plan's "LIF
-cross-check" row), so integration-scheme details are unverified. Two known
-differences: the paper assigns a neuron's sign by the majority of its predicted
+2 uF/cm^2 = 20 ms). Checked against its Brian2 code on 2026-10-16
+(offline/brian2_check.py, docs/lif_fit.md): the constants match, but Shiu's neuron
+freezes v and g while refractory, sets g to 0 on a spike and integrates exactly at
+0.1 ms, where this code lets g keep decaying, does not reset it and uses Euler at
+0.2 ms. Timing shifts by milliseconds under Shiu's form, selectivity and heading
+side do not. Two further known differences: the paper assigns a neuron's sign by the majority of its predicted
 presynaptic sites, this graph by the neuron's consensus transmitter; and the
 paper lists only GABA and glutamate as inhibitory, this code also counts
 histamine (no histaminergic neuron is in the 495-neuron graph, so it changes

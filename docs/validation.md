@@ -56,7 +56,7 @@ fixed chosen parameters, without refitting.
 | Condition | Published result | Expected here | Result | Status |
 | --- | --- | --- | --- | --- |
 | LPLC2 silenced | Fewer GF-mediated escapes (Ache et al. 2019) | Short-mode fraction drops | see below | run, offline |
-| GF silenced | Flies caught more by damselflies (Chai et al. 2025) | Higher human hit rate, fast strikes most | needs human play | not run |
+| GF silenced | Flies caught more by damselflies (Chai et al. 2025) | Higher hit rate, fast strikes most | small, see below | run, game bot (not humans) |
 | Shuffled wiring, degree-preserving | none | Looming selectivity collapses | see below | run, offline |
 | Distance-threshold bot | baseline only | Escapes depend on distance alone | see below | closed-form comparison |
 
@@ -68,6 +68,17 @@ fastest looms (at 90% silenced, 10% of r/v 10 trials and 73% of r/v 80 trials st
 spike). The plan's "short-mode fraction drops" is not testable because there is
 no long mode (criterion 3). Silencing everything silences the circuit trivially,
 because LPLC2 is the only driven input here; LC4 receives no optic input.
+
+**GF silenced** (`web/game/ablation_gf.ts`, `ablation_gf.json`; the game's hover-and-strike bot, 24 seeds per
+strike speed, giant fibers' spikes ignored so the parallel DNs alone decide takeoff). Hits out of 24, intact
+circuit then silenced: 0 then 0 at r/v 83, 50, 33 and 25 ms; **9 then 14 at r/v 17 ms**; 24 then 24 at r/v 13 and
+10 ms. The fly is gone a median of 0.3 ms before the swat lands intact and 0.5 ms silenced, and at slow strikes
+the two differ by about 0.6 ms of lead. So silencing the GF helps the bot only in the narrow band where the
+descent equals the fly's reaction time. The reason is the same as for criterion 3: DNp103, the first parallel
+DN, fires 1 to 2 ms after the GF, and a long-mode takeoff is the parallel spike plus 6.87 ms, so removing the
+GF costs the fly almost nothing in this model. Whether that is a smaller effect than Chai et al. report is not
+checked, and this is a bot on a model, not a human and not a fly. Silencing the GF here does not make long
+takeoffs slow in the way the real animal's are.
 
 **Shuffled wiring** (`ablation3_shuffle.png`; 20 degree-preserving edge shuffles of
 the 42,396-edge escape graph, in- and out-degree of every neuron kept, weights
@@ -120,6 +131,8 @@ These are already known and belong here as well as in the UI:
   normalised.
 - The angle at the GF spike rises with r/v and is not constant; whether that
   matches the published GF is unchecked.
-- The three parameters are provisional: the Brian2 code check is not done, and
-  criterion 1 constrains them only weakly.
+- The three parameters are provisional. The Brian2 code check is done (`docs/lif_fit.md`): the constants match, but
+  Shiu's neuron resets its conductance on a spike and freezes it while refractory, which this engine does not, and
+  under those equations first-spike times move by milliseconds (up to tens in some trials) while selectivity and
+  heading side hold. Criterion 1 also constrains the parameters only weakly.
 - Monocular drive in the fit and gate runs; bilateral only in `heading.py`.

@@ -1,0 +1,132 @@
+{
+ "seeds": 24,
+ "hoverMm": 40,
+ "rows": [
+  {
+   "strikeMs": 0.6,
+   "rvMs": 83.33333333333334,
+   "intact": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 50.52999999999997
+   },
+   "silenced": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 49.930000000000064
+   }
+  },
+  {
+   "strikeMs": 1,
+   "rvMs": 50,
+   "intact": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 25.13000000000011
+   },
+   "silenced": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 24.529999999999973
+   }
+  },
+  {
+   "strikeMs": 1.5,
+   "rvMs": 33.333333333333336,
+   "intact": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 12.529999999999973
+   },
+   "silenced": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 11.930000000000064
+   }
+  },
+  {
+   "strikeMs": 2,
+   "rvMs": 25,
+   "intact": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 6.529999999999973
+   },
+   "silenced": {
+    "hit": 0,
+    "escaped": 24,
+    "spooked": 0,
+    "other": 0,
+    "margin": 5.730000000000018
+   }
+  },
+  {
+   "strikeMs": 3,
+   "rvMs": 16.666666666666668,
+   "intact": {
+    "hit": 9,
+    "escaped": 15,
+    "spooked": 0,
+    "other": 0,
+    "margin": 0.3300000000001546
+   },
+   "silenced": {
+    "hit": 14,
+    "escaped": 10,
+    "spooked": 0,
+    "other": 0,
+    "margin": 0.5300000000002001
+   }
+  },
+  {
+   "strikeMs": 4,
+   "rvMs": 12.5,
+   "intact": {
+    "hit": 24,
+    "escaped": 0,
+    "spooked": 0,
+    "other": 0,
+    "margin": -2.6699999999998454
+   },
+   "silenced": {
+    "hit": 24,
+    "escaped": 0,
+    "spooked": 0,
+    "other": 0,
+    "margin": null
+   }
+  },
+  {
+   "strikeMs": 5,
+   "rvMs": 10,
+   "intact": {
+    "hit": 24,
+    "escaped": 0,
+    "spooked": 0,
+    "other": 0,
+    "margin": -4.470000000000027
+   },
+   "silenced": {
+    "hit": 24,
+    "escaped": 0,
+    "spooked": 0,
+    "other": 0,
+    "margin": null
+   }
+  }
+ ]
+}
