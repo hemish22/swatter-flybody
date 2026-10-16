@@ -161,9 +161,8 @@ explain themselves rather than starting. `scripts/dgx.sh` syncs code, runs a job
 in a detached tmux session, and pulls results back; `data/raw` is never copied
 down. `make help` splits the targets.
 
-**The DGX has not been reached yet.** Neither `h4hgpu` nor `172.16.0.32`
-answers on port 22 from here, so `scripts/dgx.sh` is written but untested
-against a real machine. The host needs confirming.
+**Update:** the DGX was later reached over SSH and the heavy jobs have run there (see
+`AGENTS.md` for the working setup). The host is set with `SWATTER_DGX_HOST`.
 
 ## What is left
 

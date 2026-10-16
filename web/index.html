@@ -3,39 +3,206 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SWATTER</title>
 <style>
-  :root { --bg: #14161a; --panel: #1d2026; --ink: #e8e6e1; --muted: #9a9890; --accent: #5aa9ff; --warn: #f0a04b; --good: #5dd39e; --bad: #ff6b6b; }
-  @media (prefers-color-scheme: light) { :root { --bg: #f1efe9; --panel: #fff; --ink: #1a1a19; --muted: #6a6963; --accent: #1f6fd0; --warn: #b8610f; --good: #14804a; --bad: #c0392b; } }
+  /* Palette from confocal microscopy: voltage is GFP cyan, a spike is magenta, the fly is amber on a slate bench. */
+  :root {
+    color-scheme: dark;
+    --bg: #090f12; --panel: #101b1f; --raise: #16262b; --line: #223338;
+    --ink: #e5eeee; --muted: #8ea3a6;
+    --accent: #4fe3d1; --bad: #ff4fa3; --warn: #f0a95b; --good: #7bdc9a;
+    --font: ui-sans-serif, "SF Pro Text", Inter, system-ui, sans-serif;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, sans-serif; }
-  main { max-width: 1240px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: minmax(0, 900px) minmax(260px, 1fr); }
-  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
-  h1 { font-size: 18px; margin: 0 0 4px; letter-spacing: .08em; }
-  .sub { color: var(--muted); margin: 0 0 12px; }
-  canvas { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--panel); touch-action: none; cursor: crosshair; }
-  aside { display: grid; gap: 12px; align-content: start; }
-  .panel { background: var(--panel); border-radius: 8px; padding: 12px 14px; }
-  .panel h2 { font-size: 12px; margin: 0 0 8px; color: var(--muted); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font); }
+  .num, td:last-child, output { font-variant-numeric: tabular-nums; }
+
+  header.top { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; max-width: 1360px; margin: 0 auto; padding: 14px 20px 0; }
+  h1 { font-size: 22px; margin: 0; font-weight: 800; letter-spacing: .01em; }
+  h1 small { font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 10px; letter-spacing: 0; }
+  .soundbtn { margin-left: auto; padding: 5px 12px; color: var(--muted); }
+  .soundbtn[aria-pressed="true"] { color: var(--ink); border-color: rgba(79,227,209,.5); }
+  .tabs { display: flex; gap: 4px; background: var(--panel); padding: 3px; border-radius: 10px; }
+  .tabs button { border: 0; padding: 6px 14px; border-radius: 8px; color: var(--muted); }
+  .tabs button[aria-pressed="true"] { background: var(--raise); color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+
+  main { max-width: 1480px; margin: 0 auto; padding: 14px 20px 40px; display: grid; gap: 22px; }
+  main > * { min-width: 0; }
+  /* the brain is the hero: it gets the wider, taller column; the swatting table is the smaller one on the left */
+  .hero { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+  .hero > * { min-width: 0; }
+  @media (max-width: 980px) { .hero { grid-template-columns: minmax(0, 1fr); } }
+
+  /* the table and the brain are the same size: same width, and the table stretches to the brain panel's height */
+  .stage { position: relative; min-height: 520px; height: 100%; border-radius: 14px; overflow: hidden; background: #070d10; border: 1px solid #2a4a50; }
+  @media (max-width: 980px) { .stage { height: auto; min-height: 0; aspect-ratio: 4 / 3; } }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #scene { cursor: crosshair; }
+  .pip { position: absolute; right: 14px; bottom: 14px; width: 168px; height: 112px; border: 1px solid rgba(229,238,238,.28); border-radius: 8px; pointer-events: none; }
+  .pip span { position: absolute; left: 8px; top: 6px; font-size: 12px; color: var(--ink); text-shadow: 0 1px 3px #000; }
+  @media (max-width: 620px) { .pip { width: 120px; height: 80px; } .pip span { font-size: 10px; } .hint { display: none; } }
+  .hint { position: absolute; left: 14px; bottom: 12px; max-width: 48%; font-size: 12.5px; color: var(--muted); text-shadow: 0 1px 4px #000; pointer-events: none; }
+  .tag { position: absolute; transform: translate(-50%, 0); font-size: 12.5px; padding: 2px 8px; border-radius: 6px; background: rgba(9,15,18,.78); color: var(--accent); pointer-events: none; white-space: nowrap; }
+  .banner { position: absolute; left: 14px; top: 14px; max-width: min(72%, 480px); padding: 10px 14px; border-radius: 10px; background: rgba(9,15,18,.82); border-left: 4px solid var(--muted); pointer-events: none; }
+  .banner b { display: block; font-size: 22px; line-height: 1.15; }
+  .banner span { color: var(--muted); }
+  .banner[data-outcome="hit"] { border-color: var(--good); } .banner[data-outcome="hit"] b { color: var(--good); }
+  .banner[data-outcome="escaped"], .banner[data-outcome="spooked"] { border-color: var(--bad); } .banner[data-outcome="escaped"] b, .banner[data-outcome="spooked"] b { color: var(--bad); }
+  .replaying { position: absolute; right: 14px; top: 14px; font-size: 12.5px; padding: 3px 10px; border-radius: 99px; background: rgba(9,15,18,.82); color: var(--warn); pointer-events: none; }
+
+  .under { grid-column: 1 / -1; display: grid; gap: 10px 28px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .under #mode-note { grid-column: 1 / -1; }
+  @media (max-width: 980px) { .under { grid-template-columns: minmax(0, 1fr); } }
+  .scorebar { display: flex; gap: 22px; align-items: baseline; flex-wrap: wrap; }
+  .scorebar .big { font-size: 28px; font-weight: 700; line-height: 1; } .scorebar .lab { color: var(--muted); font-size: 13px; margin-left: 6px; }
+  .detail { display: flex; flex-wrap: wrap; gap: 6px 26px; color: var(--muted); }
+  .detail b { color: var(--ink); font-weight: 600; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  label.check { color: var(--muted); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+
+  h2 { font-size: 15px; margin: 0 0 4px; font-weight: 650; }
+  .lede { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+  .note { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .note b { color: var(--ink); }
+  #mode-note { margin: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+
+  /* ---- the brain panel */
+  .brainwrap { display: flex; flex-direction: column; background: #05090b; border: 1px solid #2a4a50; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(79,227,209,.06), 0 18px 60px -30px rgba(79,227,209,.35); }
+  .brainhead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; padding: 12px 16px 0; }
+  .brainhead h2 { font-size: 17px; margin: 0; letter-spacing: .01em; }
+  .brainhead .sub { color: var(--muted); font-size: 12.5px; }
+  .brainhead .key { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+  .brainhead .key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .brainview { position: relative; flex: 1 1 auto; min-height: 300px; }
+  #circuit { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .hud { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 10px 16px 0; border: 1px solid rgba(79,227,209,.2); border-radius: 10px; background: rgba(8,16,19,.9); overflow: hidden; }
+  .hud div { padding: 8px 14px; border-left: 1px solid rgba(79,227,209,.14); } .hud div:first-child { border-left: 0; }
+  @media (max-width: 560px) { .hud { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .hud div { color: var(--muted); font-size: 12px; line-height: 1.2; }
+  .hud b { display: block; font-size: 24px; font-weight: 700; color: #fff; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .hud b.hot { color: var(--bad); text-shadow: 0 0 14px rgba(255,79,163,.55); }
+  .hud b.cool { color: var(--accent); text-shadow: 0 0 14px rgba(79,227,209,.4); }
+  .hud small { font-size: 13px; font-weight: 500; color: var(--muted); }
+  #labpanel { padding: 14px 16px; }
+  .strip { border-top: 1px solid #1c3338; padding: 8px 16px 10px; background: #070d10; }
+  .strip .row { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .strip .row b { color: var(--ink); font-size: 13px; }
+  .strip .row .legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; margin-right: 6px; vertical-align: 3px; }
+  #overlay { width: 100%; height: 138px; display: block; }
+  .brainwrap .note { margin: 0; padding: 0 16px 10px; background: #070d10; }
+
+  /* ---- the four-step account, as a strip */
+  .storyhead { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .storyhead .lede { margin: 0; }
+  .reaction { margin-left: auto; font-size: 13px; color: var(--muted); } .reaction b { color: var(--ink); font-size: 16px; }
+  ol.chain { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 980px) { ol.chain { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  @media (max-width: 520px) { ol.chain { grid-template-columns: minmax(0, 1fr); } }
+  ol.chain li { position: relative; padding: 12px 12px 10px 14px; background: var(--raise); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  ol.chain li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--line); }
+  ol.chain li i { display: none; }
+  ol.chain li[data-state="live"] { border-color: var(--bad); box-shadow: 0 0 22px -8px rgba(255,79,163,.7); } ol.chain li[data-state="live"]::before { background: var(--bad); }
+  ol.chain li[data-state="done"] { border-color: rgba(79,227,209,.55); } ol.chain li[data-state="done"]::before { background: var(--accent); }
+  ol.chain b { display: block; font-weight: 650; font-size: 14px; } ol.chain li[data-state="idle"] b { color: var(--muted); }
+  ol.chain span { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+  ol.chain li[data-state="done"] span { color: var(--ink); }
+  ol.chain em { display: block; font-style: normal; color: var(--warn); font-size: 12px; margin-top: 4px; }
+
+  .lower { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  @media (max-width: 980px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+  #pop { width: 100%; max-width: 560px; height: auto; display: block; aspect-ratio: 360 / 330; margin: 12px auto 0; }
+  .eyeguide { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
+  .eyeguide li { padding-left: 30px; position: relative; }
+  .eyeguide li b { color: var(--ink); font-weight: 650; }
+  .eyeguide li::before { content: attr(data-n); position: absolute; left: 0; top: 1px; width: 21px; height: 21px; border-radius: 50%; background: var(--raise); border: 1px solid var(--line); color: var(--ink); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  .sw { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 4px; }
+  #poppanel summary { font-size: 16px; }
+  details summary { cursor: pointer; font-size: 15px; font-weight: 650; list-style: none; } details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: "  show"; color: var(--muted); font-weight: 400; font-size: 12.5px; } details[open] summary::after { content: "  hide"; }
+
   table { width: 100%; border-collapse: collapse; }
-  td { padding: 3px 0; } td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-  button { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--muted); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
-  button:hover { border-color: var(--accent); } button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .outcome { font-size: 20px; font-weight: 700; } .hit { color: var(--good); } .escaped, .spooked { color: var(--warn); } .miss, .timeout { color: var(--muted); }
-  .note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  td { padding: 3px 0; } td:last-child { text-align: right; }
+  button { font: inherit; color: var(--ink); background: var(--raise); border: 1px solid var(--line); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); } button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04211d; font-weight: 600; }
+  select, input { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+  #name { width: 10em; }
+  [hidden] { display: none !important; }
+  .outcome { font-size: 20px; font-weight: 700; } .hit { color: var(--good); } .escaped, .spooked { color: var(--bad); } .miss, .timeout { color: var(--muted); }
+  canvas#lab-plot { width: 100%; height: auto; }
 </style>
+<header class="top">
+  <h1>SWATTER<small>the fly's brain decides when it jumps</small></h1>
+  <nav class="tabs" aria-label="Mode">
+    <button data-mode="classic" aria-pressed="true">Classic</button>
+    <button data-mode="streak" aria-pressed="false">Streak</button>
+    <button data-mode="lab" aria-pressed="false">Lab</button>
+  </nav>
+  <button id="sound" class="soundbtn" aria-pressed="true" title="Sound on or off">Sound on</button>
+</header>
 <main>
-  <section>
-    <h1>SWATTER</h1>
-    <p class="sub">Swat the fly. Its escape reflex is wired from a real fly connectome. Move the mouse to hover the swatter; <b>hold the button to charge, release to strike</b>.</p>
-    <canvas id="arena" width="900" height="600" aria-label="Top-down view of the table, the fly and the swatter"></canvas>
-  </section>
-  <aside>
-    <div class="panel"><h2>Classic</h2><table><tr><td>Swats</td><td id="n">0 / 20</td></tr><tr><td>Hits</td><td id="hits">0</td></tr></table></div>
-    <div class="panel" id="card"><h2>Last swat</h2><div class="note">No swat yet.</div></div>
-    <div class="panel"><h2>Fly's brain, live</h2>
-      <canvas id="overlay" width="300" height="210" aria-label="Giant fiber membrane voltage and swatter angular size over time"></canvas>
-      <div class="note">Solid: right giant fiber, dashed: left, dotted line: spike threshold. Grey: the swatter's angular size in the fly's eye.</div>
+  <div class="hero">
+    <div class="stage" id="stage">
+      <canvas id="scene" aria-label="3D view of the table, the fly and your swatter"></canvas>
+      <canvas id="arena" width="900" height="600" hidden aria-label="Lab view: the fly from above with the stimulus coming in"></canvas>
+      <div class="banner" id="banner" hidden></div>
+      <div class="replaying" id="replaying" hidden>Slow-motion replay</div>
+      <div class="tag" id="hud-charge" hidden></div>
+      <div class="pip" id="pip"><span>What the fly's eye sees</span></div>
+      <div class="hint" id="sub"></div>
     </div>
-    <div class="panel"><div class="note"><b>What is real here.</b> The escape circuit is the connectome (MaleCNS v1.0) wired as a leaky integrate-and-fire network. The loom detector that feeds it is a model component we supplied, not something the fly's visual system was shown to do (see docs/validation.md). The model also fails to reproduce the published trend of takeoff mode with loom speed (docs/validation.md).</div></div>
-  </aside>
+    <div class="brainwrap" id="brainwrap">
+      <div id="labpanel" hidden></div>
+      <section id="circuitpanel" style="display:flex;flex-direction:column;flex:1 1 auto">
+        <div class="brainhead">
+          <h2>The fly's brain, live</h2>
+          <span class="sub">495 neurons from the connectome. Each dot is a neuron; a flash is a spike.</span>
+          <span class="key"><span><i style="background:#f0a95b"></i>looming detector</span><span><i style="background:#4fe3d1"></i>relay</span><span><i style="background:#ff4fa3"></i>spike</span></span>
+        </div>
+        <div class="hud" id="counts"></div>
+        <div class="brainview">
+          <canvas id="circuit" aria-label="Diagram of the escape circuit with live spikes"></canvas>
+        </div>
+        <div class="strip" id="brainpanel">
+          <div class="row"><b>Giant fiber voltage</b><span>the jump fires when it crosses the dotted line</span>
+            <span class="legend" style="margin-left:auto"><span><i style="border-color:#4fe3d1"></i>right</span> <span><i style="border-color:#4fe3d1;border-top-style:dashed"></i>left</span> <span><i style="border-color:#8fa5a8"></i>swatter size</span></span></div>
+          <canvas id="overlay" aria-label="Giant fiber membrane voltage and swatter angular size over time"></canvas>
+        </div>
+        <div class="note">The layout is a diagram, not anatomy: right-leaning relays sit at the top, left-leaning at the bottom. The connections and the activity are the engine's own.</div>
+      </section>
+    </div>
+    <div class="under">
+      <div id="stats"><div class="scorebar" id="stats-rows"></div><div id="submit"></div></div>
+      <div id="card"></div>
+      <p class="note" id="mode-note"></p>
+    </div>
+  </div>
+
+  <section id="story" class="card">
+    <div class="storyhead">
+      <h2>What its brain does</h2>
+      <span class="lede">From the swatter appearing to the fly leaving takes only about 10 to 25 ms.</span>
+      <div class="reaction" id="reaction"></div>
+    </div>
+    <ol class="chain" id="chain"></ol>
+  </section>
+
+  <div class="lower">
+    <section id="poppanel" class="card">
+      <details open>
+        <summary>What each eye sees</summary>
+        <ol class="eyeguide">
+          <li data-n="1"><b>The swatter in each eye.</b> The <span class="sw" style="background:#ff7fbf"></span>pink patch is where the swatter covers that eye's view. The grey dots are the eye's lenses. This is geometry, not a neural response.</li>
+          <li data-n="2"><b>The looming detectors.</b> Each <span class="sw" style="border:2px solid #f0a95b"></span>orange ring is one LPLC2 neuron, placed where it looks. Brighter means more voltage; white with a pink glow means it just spiked.</li>
+          <li data-n="3"><b>The escape neurons.</b> The bars fill as the detectors push them toward threshold. A <span class="sw" style="background:#ff4fa3"></span>pink bar means that neuron spiked, and the jump follows.</li>
+        </ol>
+        <canvas id="pop" width="360" height="330" aria-label="Both eyes on a hexagonal lattice with the swatter's footprint and the LPLC2 neurons, and the escape neurons' voltages"></canvas>
+      </details>
+    </section>
+    <div style="display:grid;gap:20px">
+      <section id="board" class="card"><h2>Leaderboard</h2><p class="lede">Verified runs only. The server replays every swat.</p><table id="board-rows"></table></section>
+      <section class="card"><div class="note" style="margin:0"><b>What is real here.</b> The escape circuit is the connectome (MaleCNS v1.0) wired as a leaky integrate-and-fire network. The loom detector that feeds it is a model component we supplied, not something the fly's visual system was shown to do (see docs/validation.md). The model also fails to reproduce the published trend of takeoff mode with loom speed. The 3D fly is an illustration that plays back what the neurons decided, and it is drawn about 13 times life size.</div></section>
+    </div>
+  </div>
 </main>
 <script type="module" src="dist/game/main.js"></script>

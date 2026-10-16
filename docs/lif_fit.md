@@ -55,9 +55,58 @@ interpolation.
   reversed (333 / 255 / 135 / 40 ms), because every trial has the same collision
   time. The plan's "earlier in time for faster looms" is therefore true only in
   one of the two readings; this repo reports time to collision.
-- **Provisional, not frozen.** The Brian2 code behind the LIF constants is still
-  unchecked (the constants match the paper's Methods text), and criteria 3 and 4
-  have not been run. The three parameters are frozen only after those.
+- **Provisional, not frozen.** The Brian2 code behind the LIF constants was checked on
+  2026-10-16 (section below): the constants match, but the neuron's behaviour around its own
+  spike differs, and that moves spike timing. Criteria 3 and 4 have been run since. The
+  parameters stay provisional.
+
+## Brian2 cross-check (2026-10-16)
+
+Script `offline/brian2_check.py`, result `brian2_check.json`, log `logs/brian2_check.log`. Run on the DGX in
+tmux (Brian2 2.10.1, numpy target, about 80 s for everything). Reference: `model.py` of Shiu et al. 2024
+(github.com/philshiu/Drosophila_brain_model), read on the same day. Same 495-neuron graph, weights, fitted
+parameters and per-step drive, through Brian2, against the outcomes `web/brain/parity.json` records for the engine
+(50 trials: 42 expanding, 4 controls, 4 edge cases).
+
+**The constants match** (v0 = v_rst = -52 mV, v_th = -45 mV, t_mbr 20 ms, tau 5 ms, t_rfc 2.2 ms, t_dly 1.8 ms,
+w_syn 0.275 mV). **Three things about a neuron's own spike do not**, and the engine follows the other side of each:
+
+| | Shiu's Brian2 model | `lif.py` and the engine |
+| --- | --- | --- |
+| Refractory period | `v` and `g` both frozen (`unless refractory`) | `v` held at reset, `g` keeps decaying and integrating |
+| On a spike | `g` is set to 0 | `g` carries on |
+| Integration | exact (`method='linear'`), 0.1 ms | forward Euler, 0.2 ms |
+
+Results (GF = giant fiber; "brian minus engine" is the first-spike time difference):
+
+| Brian2 variant | GF fires in the same trials | GF first spike, median and spread | trials > 5 ms apart | mode agrees | side agrees | spikes per trial vs engine |
+| --- | --- | --- | --- | --- | --- | --- |
+| Shiu's equations, 0.1 ms | 46 of 46, controls silent | +1.0 ms, 5 to 95%: -35 to +4.5 ms | 14 of 46 (12 earlier) | 48 of 50 | 50 of 50 | 0.46 |
+| Shiu's equations, 0.2 ms | 46 of 46, controls silent | +0.9 ms, 5 to 95%: -35 to +32 ms | 16 of 46 (13 earlier) | 48 of 50 | 50 of 50 | 0.48 |
+| the engine's scheme written in Brian2 (control) | 46 of 46, controls silent | +0.4 ms, 5 to 95%: 0 to +1.1 ms | 2 of 46 | 50 of 50 | 50 of 50 | 1.07 |
+
+The control row says how far the harness itself is from the engine: a steady +0.4 ms (Brian applies its state update
+and synaptic events in a slightly different order than the engine's step), and two borderline trials that move by 11
+and 22 ms. So differences under about half a millisecond below are the harness, not the neuron.
+
+What this does and does not show:
+
+- **Criterion 1 survives the change of equations.** With the fitted parameters untouched, the giant fiber fires in
+  exactly the same 46 trials, the four controls stay silent, and the heading side agrees in all 50.
+- **Timing does not survive.** Under Shiu's equations a typical GF spike is 1 to 4 ms later, and in 14 to 16 of
+  46 trials it moves by more than 5 ms, mostly earlier (by about 10 to 38 ms, and up to 100 ms or more in a few).
+  Total spikes fall to under half. The probable reason is that a neuron whose `g` is reset after each spike fires
+  less often, so the circuit's inhibition is weaker and the GF crosses threshold sooner, but that was not isolated.
+  Everything quoted in this repo about the angle at the spike, time to collision and reaction time is a property of
+  the engine's neuron scheme, not of Shiu's model.
+- **Criterion 3 does not change.** Short-mode trials by r/v among the 46 that fire, engine then Shiu's equations
+  (0.1 ms): 8 then 7 of 8 at r/v 20, 5 then 5 of 6 at 28, 6 then 5 of 6 at 40, and 6 of 6 either way at 10, 14, 57 and
+  80. Two trials flip from short to long, at r/v 20 and 40, and the rest of the table does not move. No trend over r/v
+  in either column.
+- **The parameters are not refit.** Matching Shiu's equations would mean changing `lif.py`, the Rust engine and
+  `engine_ref.py`, re-exporting `web/brain/`, and rerunning the 378-setting fit, and the game would feel different.
+  That is not needed for the game to work; it is needed only to call the numbers "Shiu-model" numbers. Left as is,
+  and stated.
 
 ## Criterion 3 (takeoff mode): not met
 

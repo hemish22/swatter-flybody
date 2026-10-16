@@ -1,10 +1,11 @@
 # Game world model (web/game) and what the frozen brain does to it
 
 Status: the world model, a deterministic round simulator and a skill analysis exist and are tested
-under Node against the real engine, and a playable Classic round runs in a browser (`web/index.html`):
-Canvas2D arena, mouse hover and hold-to-charge, post-round card, live giant-fiber/angular-size overlay,
-slow replay. Not done: Streak and Lab modes, the leaderboard, sound, touch handling, the hexagonal eye
-heatmaps and LPLC2/DN population panels of the plan's overlay, a pixel scale tuned by play.
+under Node against the real engine. A browser page (`web/index.html`) has three modes: **Classic** (20 swats,
+score = hits, submittable to the leaderboard), **Streak** and **Lab**; plus the post-round card, a live
+giant-fiber/angular-size overlay and slow replay. A Node leaderboard server replays submitted runs
+(`server/`, below). The overlay has the plan's population panel (below). Not done: sound, a pixel scale tuned
+by play, a touch layout beyond tap-and-hold, any human playtest.
 
 ## The finding that shaped the rules
 
@@ -77,16 +78,129 @@ Dead ahead is the fly's blind spot in this model, ten times more forgiving than 
 the lateral eye-axis assumption (front and back sit at the edge of both eyes' fields), so it is a prediction of
 the model as built, not something measured in flies.
 
+## Publishing it (static, no leaderboard)
+
+`cd web && npm run build:site` writes `web/site/` (1.5 MB: `index.html`, the bundle, and `brain/` without the test file).
+Upload that folder to any static host: Cloudflare Pages or Netlify (drag and drop the folder), or GitHub Pages
+(`.nojekyll` is included). All paths are relative, so a subpath such as `user.github.io/swatter/` works. There is no
+server: the page finds no `api/run`, says "Classic: 20 swats, your score is the number of hits", and hides the
+leaderboard card. The leaderboard server (`server/`) is still there for anyone who wants it, and when it is running the
+page uses it as before. HTTPS is needed only for sound to start reliably on some browsers; every static host gives it.
+
 ## The page
 
-`cd web && npm run build`, serve `web/` over HTTP (the engine is fetched), open `index.html`.
+`cd web && npm run build`, serve `web/` over HTTP (the engine is fetched), open `index.html`. The page needs WebGL.
 `web/browser_check.sh` runs the 50-stimulus parity set and three scripted rounds (`?demo=hit|escape|spook`)
-in headless Chrome. The card, the overlay (GF voltage, solid right and dashed left, with the threshold, plus
-the swatter's angular size) and the slow replay (0.25x, re-simulated from the trace) all come from `Round`.
+in headless Chrome (software WebGL), plus a ranked run against the real server.
+
+The page was redesigned on Oct 6 so a visitor can see what the fly's brain is doing. Rendering only: `world.ts`,
+the engine and the server's replay are untouched, and nothing drawn is read back by the rules.
+
+- **3D stage** (`web/game/scene3d.ts`, `flymodel.ts`, three.js). A table, a perforated swatter that casts a shadow, and a
+  procedural fly built from primitives (no mesh asset). The pink disc on the table is the exact footprint that decides a
+  hit, and the charge ring fills around it. A small inset (bottom right) shows what the fly's eye sees, aimed at the swatter. After a takeoff the fly stays airborne
+  (it climbs at the push-off speed, then hovers and beats its wings) and a pink dotted trail marks its path, so a
+  takeoff is readable in a still frame. The round ends at the instant the fly leaves, so the scene keeps playing after
+  it at 0.35x (rendering only), and the result banner for an escape or a spook waits until the fly is airborne. The pointer
+  is ray-cast onto the plane the swatter hovers in, so the same millimetre coordinates reach the rules as before.
+- **Layout (Oct 12).** The table and the brain are two equal panels, side by side and the same height, so neither is
+  the sidebar. The brain panel holds the live circuit, its counters and the giant-fiber voltage strip. Scores and the
+  swat result sit under both, the four-step account runs as a strip below that, then the eye panel, leaderboard and the
+  "what is real" note. On a phone the table comes first.
+- **What its brain does** (`story.ts`). Four steps light up as the engine produces them: the swatter grows, LPLC2 detectors
+  fire, the giant fiber crosses threshold, takeoff (mode, side, and the reaction time from first growth). The second step
+  carries the reminder that the detector's input is supplied by us. Steps that never happen stay grey, so a long-mode
+  takeoff visibly has no giant-fiber spike.
+- **The fly's brain, live** (`circuit.ts`). The real 495-neuron escape graph: 620 strongest connections, dot brightness
+  follows membrane voltage, a magenta bloom is a spike, and spikes travel along their connections. Neurons that fired
+  earlier in the round stay warm, so the pattern of the whole decision remains on screen. Counters show spikes this round,
+  neurons firing now, escape neurons firing and the giant fiber's voltage. The layout is a diagram, not anatomy (rows are
+  ordered by which side a relay leans toward).
+- **Slow-motion replay.** After each swat the last 300 ms replay at 0.1x from the recorded trace (the hover before it is
+  fast-forwarded), with the fly, the circuit and the steps all playing back; "Replay automatically" turns it off.
+- **The fly is an illustration.** It is drawn about 13 times life size. Its crouch follows the giant fiber's voltage and its
+  takeoff is the one the spikes decided (a push-off to the chosen side, or straight up when the model gives no side). It
+  never decides anything, and the page says so.
+- Screenshot URLs: `?demo=escape&after=110` freezes the scene that many simulated ms after the round ended, `&replay=1`
+  starts the slow-motion replay, `&eyes=1` opens the eye panel.
 
 ![hit](figures/game_hit.png)
 ![escaped](figures/game_escape.png)
 ![spooked](figures/game_spook.png)
+
+## The population panel (`web/game/overlay.ts`, now under "What each eye sees" in the page's right column)
+
+![population panel](figures/game_population.png)
+
+Two hexagonal discs, one per eye, and a row of escape-neuron bars, drawn from the live engine every frame.
+
+- **Eyes.** Hex lattice points on each eye's plane out to 120 degrees from the eye's axis, dark where the
+  swatter's disc covers them. This is **geometry**, not a neural response: the optic lobe is not run
+  (`docs/week1_gate.md`), and the panel says so. The plan's panel was meant to show what each eye sees; it is as
+  close to that as an offline optic lobe allows.
+- **LPLC2.** One ring per driven LPLC2 neuron at its receptive-field centre (`brain.bin`'s `drive_rf_deg`),
+  brighter with membrane potential and red for 15 ms after a spike. Rings outside 120 degrees are not drawn.
+- **Escape neurons.** One bar per giant fiber and parallel DN, labelled by type and side, voltage from the
+  engine (red for 15 ms after a spike).
+
+The panel only reads engine state (`Round.engine`, `Round.lastSpikeMs`), so it cannot change a round, and the
+server replay is unaffected. Touch: a finger down both positions the swatter and starts the charge, release
+strikes; there is no hover on a touch screen, so touch play is tap-and-hold rather than the mouse's
+hover-then-charge. Untested on a real device.
+
+## Streak, Lab and the leaderboard
+
+**Streak.** Play until three swats in a row fail to hit. "Fail to hit" is escaped, spooked, missed or timed
+out: the plan says "until the fly escapes three times in a row" and has no rule for a swat that lands
+elsewhere, so a miss counts against you (a decision, easy to change in `main.ts`). Score = hits; the best is kept
+in `localStorage` only (per browser, never submitted).
+
+**Lab** (`web/lab/`). A tethered fly: pick expanding, receding, translating or dimming, r/v from 10 to 80 ms,
+and one of eight directions, then Fire, or run the standard sweep (4 r/v × 8 directions × 4 kinds = 128
+trials, about a second). The frames are made by the TypeScript port of `offline/loom.py` and
+`offline/heading.py`, and `web/lab/lab.test.ts` pins them to the 50 parity vectors the Python reference
+made (frames equal to 1e-6, outcomes equal to the reference). The plot builds live: angle at the first giant-fiber
+spike against r/v, and the per-kind tally of giant-fiber spikes (criterion 1: 0 for receding, translating,
+dimming). From the engine itself, the median angle at the first giant-fiber spike for r/v 10 / 20 / 40 / 80
+over six lateral and diagonal directions is 6.6 / 8.6 / 12.4 / 20.1 degrees (the validation doc's 7.8 / 10.2
+/ 13.2 / 20.6 used a different set of eight azimuths, see below).
+One thing the full sweep shows that the validation doc's tables did not spell out: **straight ahead and straight
+behind are the model's weak directions** (the eyes are assumed to face sideways, so these sit at the edge of
+both fields), and at r/v 10 the disc has grown too little by the end of the 400 ms window for the giant fiber to
+spike from either. Giant-fiber first-spike times in ms, expanding disc, directions 0, 45, 90, 135, 180, 225, 270, 315:
+
+| r/v | 0 | 45 | 90 | 135 | 180 | 225 | 270 | 315 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 10 | none | 327 | 317 | 303 | none | 278 | 306 | 298 |
+| 20 | 385 | 273 | 215 | 211 | 380 | 181 | 217 | 209 |
+| 40 | 344 | 167 | 111 | 134 | 317 | 67 | 98 | 89 |
+| 80 | 274 | 61 | 27 | 28 | 258 | 27 | 26 | 31 |
+
+So "the giant fiber spikes for every expanding trial" in `docs/validation.md` holds for the lateral and
+diagonal directions it tested, not for every direction at every speed.
+
+**Leaderboard** (`server/`, Node, `node server/server.ts [--port 8080] [--db file.sqlite]`; it also serves
+`web/`). The plan says FastAPI + SQLite with the re-sim in Node; this is all Node (`node:sqlite`) so the
+verifier is literally the browser's game code and there is no Python-to-Node bridge. Flow:
+
+1. `GET /api/run` issues a seed; the 20 swats' seeds are a fixed chain from it (`runSeeds`), so a player cannot
+   choose their flies.
+2. The page records each swat's cursor trace (quantised to 0.1 mm, one input per 5 ms tick) and the card it saw.
+3. `POST /api/submit` sends the traces and claimed outcome, mode and heading side per swat. The server replays
+   each with `simulateRound` on the same WASM engine and accepts only if every claim matches. The stored score
+   is the replay's. A run id is single-use (a failed submission spends it), expires after two hours, and the
+   request is refused if the page's rules id (hash of `CONFIG` and the brain's provenance) differs from the server's.
+4. `GET /api/leaderboard` lists accepted runs, hits then earliest.
+
+Tests (`server/verify.test.ts`, 7): an honest run verifies; a wrong claim, a wrong seed, a moved trace, wrong swat
+count, padded, truncated, out-of-arena and junk traces are refused; verification is deterministic and takes
+about 250 ms for 20 swats; the HTTP flow including double-submit and path traversal.
+
+What this does not do, and is not claimed to: it cannot tell a human from a script that sends plausible cursor
+traces. It proves the claimed outcome follows from the trace under the real rules, nothing more. The browser and
+the server both run V8's `Math` functions today; another browser's `Math.exp`/`atan` could differ in the last
+bit, which could flip an outcome that sits on a knife edge, and that is untested. Verification runs on the main
+thread and bounds a run to 80,000 ticks (about 5 s worst case), fine for a small launch and not for a flood.
 
 ## Limits to keep in mind
 

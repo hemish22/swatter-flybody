@@ -31,14 +31,14 @@ measured counts and DN identities.
 Built: `eye.py`, `optic_wrapper.py`, `malecns_ol.py`, `optic_gate.py` (optic lobe,
 kept offline), `escape_graph.py`, `lif.py`, `loom_sweep.py`, `lif_scan.py`.
 Held-out LIF fit done, provisional (`offline/lif_fit.py`, `docs/lif_fit.md`; sharded over
-GPUs, ~4 min). Criterion 3 (mode) fails, criterion 4 (heading) is met: `docs/lif_fit.md`, `docs/heading.md`.
-Validation v1 done: `docs/validation.md` (plots 1-4 and ablations 1, 3, 4; plot 5 and the GF-silenced mode need the game).
+GPUs, ~4 min). Brian2 cross-check done 2026-10-16 (`offline/brian2_check.py`, in `docs/lif_fit.md`): same constants, different neuron behaviour around a spike, so timing is engine-specific. Criterion 3 (mode) fails, criterion 4 (heading) is met: `docs/lif_fit.md`, `docs/heading.md`.
+Validation v1 done: `docs/validation.md` (plots 1-4 and ablations 1, 3, 4; GF-silenced bot run in `web/game/ablation_gf.ts`; plot 5 needs human play).
 Export + Python reference engine (`offline/export.py`, `offline/engine_ref.py`, `web/brain/`, `docs/engine.md`) agree on 50 parity stimuli.
 Rust/WASM engine built (`engine/`, `web/brain/engine.wasm`, tested via `offline/wasm_host.py` + wasmtime). Rust lives in ~/.cargo (`export PATH=$HOME/.cargo/bin:$PATH`); Node is in ~/.local/node (`export PATH=$HOME/.local/node/bin:$PATH`; `cd web && npm test` runs the TypeScript parity test).
 Game world model + round sim in `web/game/world.ts` (tests: `cd web && npm test`; skill curves: `node game/difficulty.ts`); defaults deviate from the plan on purpose, see `docs/game.md`.
 A playable Classic round runs in a browser (`web/index.html`, `npm run build`, `web/browser_check.sh` for headless Chrome checks).
-Not started: Streak and Lab modes, the plan's full overlay panels,
-`engine/`, `web/`, `server/`. The optic-lobe `malecns` backend is deliberately not
+Streak and Lab modes (`web/lab/`) and the leaderboard re-sim server (`server/`, Node; `npm test` in `web/` runs all Node tests; `npx tsc -p .` type-checks) exist; see docs/game.md.
+The overlay's population panel (hex eyes, LPLC2, escape DNs) is `web/game/overlay.ts`. The page is a three.js stage (`web/game/scene3d.ts`, `flymodel.ts`) with a circuit diagram (`circuit.ts`) and a step-by-step account (`story.ts`, tested); it is rendering only and must never feed back into `world.ts`. `web/browser_check.sh` needs headless Chrome with software WebGL (flags are in the script). Sound is synthesised in `web/game/sound.ts`. `npm run build:site` makes the static `web/site/`; the project is published without the leaderboard. Not started: a real touch layout, human playtest. The optic-lobe `malecns` backend is deliberately not
 built (`docs/optic_lobe.md`).
 
 **This host, `dgxa100`, is the DGX.** No ssh hop and no `scripts/dgx.sh`: run
