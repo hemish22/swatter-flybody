@@ -2,7 +2,7 @@
 
 **A browser game where a fruit fly's real escape circuit is your opponent.**
 
-**[Play it](https://hemish22.github.io/swatter-flybody/)** · runs in the browser, needs WebGL · desktop with a mouse works best
+**[Play it](https://swatter-flybody.vercel.app/)** · runs in the browser, needs WebGL · desktop with a mouse works best
 
 ![SWATTER: a fly that has just left the table, with its brain's activity on the right](docs/figures/game_escape.png)
 
