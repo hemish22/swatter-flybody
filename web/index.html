@@ -32,13 +32,13 @@
   @media (max-width: 980px) { .hero { grid-template-columns: minmax(0, 1fr); } }
   /* Duel: the wide stage on top, the two brains side by side underneath */
   body[data-view="duel"] .hero { grid-template-areas: "stage stage" "a b" "under under"; }
-  body[data-view="duel"] .stage { grid-area: stage; min-height: 0; height: auto; aspect-ratio: 21 / 9; max-height: 640px; }
+  body[data-view="duel"] .stage { grid-area: stage; min-height: 0; height: clamp(300px, 30vw, 440px); }
   body[data-view="duel"] #brainwrap { grid-area: a; }
   body[data-view="duel"] #brainwrapB { grid-area: b; }
   body[data-view="duel"] .under { grid-area: under; }
   @media (max-width: 980px) {
     body[data-view="duel"] .hero { grid-template-areas: "stage" "a" "b" "under"; }
-    body[data-view="duel"] .stage { aspect-ratio: 4 / 3; }
+    body[data-view="duel"] .stage { height: auto; aspect-ratio: 4 / 3; }
   }
 
   /* the table and the brain are the same size: same width, and the table stretches to the brain panel's height */
