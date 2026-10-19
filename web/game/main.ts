@@ -579,7 +579,7 @@ async function main(): Promise<void> {
   }
   requestAnimationFrame(frame);
   const first = params.get("mode");
-  setMode(first === "lab" || first === "streak" || first === "duel" ? first : "classic");
+  setMode(first === "lab" || first === "streak" || first === "classic" ? first : "duel"); // a first visit lands on Duel: nothing to learn before something happens
 
   // Scripted rounds for screenshots and tests: ?demo=hit | escape | spook, or ?mode=lab&demo=lab (a fired loom).
   // Add &after=<ms> to freeze the scene that many simulated ms past the end of the round, e.g. mid-takeoff.

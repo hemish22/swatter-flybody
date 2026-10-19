@@ -17,7 +17,7 @@ parity=$(run "http://localhost:$PORT/parity.html" | grep -o '<pre id="result">[^
 echo "parity: $parity"
 echo "$parity" | grep -q '"ok":true' || { echo "FAIL: in-browser parity"; exit 1; }
 for d in hit escape spook; do
-  t=$(run "http://localhost:$PORT/index.html?demo=$d" | grep -o '<title>[^<]*' | sed 's/<title>//')
+  t=$(run "http://localhost:$PORT/index.html?mode=classic&demo=$d" | grep -o '<title>[^<]*' | sed 's/<title>//')
   echo "demo $d: $t"
 done
 t=$(run "http://localhost:$PORT/index.html?mode=lab&demo=lab" | grep -o '<title>[^<]*' | sed 's/<title>//')
@@ -25,7 +25,7 @@ echo "demo lab: $t"
 t=$(run "http://localhost:$PORT/index.html?mode=duel&demo=1&seed=5" | grep -o '<title>[^<]*' | sed 's/<title>//')
 echo "demo duel: $t"
 echo "$t" | grep -q "SWATTER demo duel: " || { echo "FAIL: duel demo did not finish"; exit 1; }
-note=$(run "http://localhost:$PORT/index.html" | grep -o 'id="mode-note">[^<]*' | sed 's/id="mode-note">//')
+note=$(run "http://localhost:$PORT/index.html?mode=classic" | grep -o 'id="mode-note">[^<]*' | sed 's/id="mode-note">//')
 echo "classic: $note"
 echo "$note" | grep -q "Ranked run" || { echo "FAIL: no ranked run from the server"; exit 1; }
 rm -f "${TMPDIR:-/tmp}/swatter-check-$$.sqlite"
