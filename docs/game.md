@@ -121,8 +121,8 @@ the engine and the server's replay are untouched, and nothing drawn is read back
 - **The fly is an illustration.** It is drawn about 13 times life size. Its crouch follows the giant fiber's voltage and its
   takeoff is the one the spikes decided (a push-off to the chosen side, or straight up when the model gives no side). It
   never decides anything, and the page says so.
-- Screenshot URLs: `?demo=escape&after=110` freezes the scene that many simulated ms after the round ended, `&replay=1`
-  starts the slow-motion replay, `&eyes=1` opens the eye panel.
+- Screenshot URLs (Classic is no longer the default mode, so add `mode=classic`): `?mode=classic&demo=escape&after=110` freezes the scene that many simulated ms after the round ended, `&replay=1`
+  starts the slow-motion replay, `&eyes=1` opens the eye panel. Duel: `?mode=duel&demo=1&seed=N[&at=ms][&after=ms]`.
 
 ![hit](figures/game_hit.png)
 ![escaped](figures/game_escape.png)

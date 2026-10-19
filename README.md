@@ -4,7 +4,9 @@
 
 **[Play it](https://swatter-flybody.vercel.app/)** · runs in the browser, needs WebGL · desktop with a mouse works best
 
-![SWATTER: a fly that has just left the table, with its brain's activity on the right](docs/figures/game_escape.png)
+![Duel: the swatter's brain, on the right, has just fired its escape neurons and released the strike; the fly's brain is on the left](docs/figures/game_duel_strike.png)
+
+![Classic: a fly that has just left the table, with its brain's activity on the right](docs/figures/game_escape.png)
 
 You hover a swatter over a fly. The fly sees it grow, and a 495-neuron slice of the fly connectome decides when and
 which way it jumps. Whether you hit it depends on that decision, and the page shows the decision as it happens: the
