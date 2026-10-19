@@ -7,14 +7,17 @@ import { encodeTrace, nextSeed, quantise, runSeeds, rulesFor } from "./trace.ts"
 import { Lab } from "../lab/ui.ts";
 import { drawPopulation } from "./overlay.ts";
 import { Stage } from "./scene3d.ts";
-import { Activity, buildCircuit, drawCircuit } from "./circuit.ts";
+import { Activity, buildCircuit, drawCircuit, type Sim } from "./circuit.ts";
+import { DuelRun } from "./duel.ts";
 import { deriveStory, resultLine, type Snapshot } from "./story.ts";
 import { Sfx, diff as soundDiff, type SoundState } from "./sound.ts";
 
 const arena = document.getElementById("arena") as HTMLCanvasElement; // Lab's 2D view
 const sceneCanvas = document.getElementById("scene") as HTMLCanvasElement;
 const overlay = document.getElementById("overlay") as HTMLCanvasElement;
+const overlayB = document.getElementById("overlayB") as HTMLCanvasElement;
 const circuitCanvas = document.getElementById("circuit") as HTMLCanvasElement;
+const circuitCanvasB = document.getElementById("circuitB") as HTMLCanvasElement;
 const pop = document.getElementById("pop") as HTMLCanvasElement;
 const CLASSIC_SWATS = 20;
 const STREAK_LIMIT = 3; // Streak ends at this many swats in a row that do not hit
@@ -28,7 +31,11 @@ const AFTER_CAP_MS = 520;
 const AFTER_SPEED = 0.35;
 /** The result banner waits until a fly that left is visibly airborne, so it never names a takeoff over a fly still on the table. */
 const AIRBORNE_MS = 140;
-type Mode = "classic" | "streak" | "lab";
+type Mode = "classic" | "streak" | "lab" | "duel";
+/** Duel: how fast simulated time runs. "auto" races through the approach and slows to 0.1x once either brain's giant fiber has fired. */
+const DUEL_SPEEDS: Record<string, number> = { slow: 0.1, real: 1, fast: 4 };
+/** Wall-clock pause after a duel ends (plus the takeoff) before the next one starts by itself. */
+const DUEL_PAUSE_MS = 3200;
 const $ = (id: string) => document.getElementById(id)!;
 const store = {
   get: (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -37,18 +44,22 @@ const store = {
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-async function loadBrain(): Promise<{ brain: FlyBrain; bin: ArrayBuffer }> {
+async function loadBrain(): Promise<{ brain: FlyBrain; bin: ArrayBuffer; another: () => Promise<FlyBrain> }> {
   const manifest: Manifest = await fetch("brain/manifest.json").then((r) => r.json());
   const [bin, wasm] = await Promise.all([
     fetch("brain/" + manifest.binary).then((r) => r.arrayBuffer()),
     fetch("brain/engine.wasm").then((r) => r.arrayBuffer()),
   ]);
-  return { brain: await FlyBrain.create(manifest, bin, wasm), bin };
+  // each call instantiates its own WebAssembly module, so a second brain shares nothing with the first (Duel mode)
+  return { brain: await FlyBrain.create(manifest, bin, wasm), bin, another: () => FlyBrain.create(manifest, bin, wasm) };
 }
 
 // ------------------------------------------------------------------------------------- giant-fiber trace
 
-function drawOverlay(round: Round): void {
+/** What the voltage strip plots: per-tick series, the first giant-fiber spike (ms), and the tick the series start at. */
+interface Trace { right: readonly number[]; left: readonly number[]; theta: readonly number[]; gf: number | null; offset: number; thetaLabel: string; thetaMax: number; spikeLabel: string }
+
+function drawOverlay(overlay: HTMLCanvasElement, round: Trace): void {
   const dpr = Math.min(2, window.devicePixelRatio || 1), w = overlay.clientWidth, h = overlay.clientHeight;
   if (w === 0 || h === 0) return;
   if (overlay.width !== Math.round(w * dpr) || overlay.height !== Math.round(h * dpr)) { overlay.width = Math.round(w * dpr); overlay.height = Math.round(h * dpr); }
@@ -56,24 +67,25 @@ function drawOverlay(round: Round): void {
   octx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const pad = { l: 40, r: 10, t: 8, b: 6 };
   octx.clearRect(0, 0, w, h);
-  const n = Math.max(round.gfVoltage.right.length, 40);
+  const n = Math.max(round.right.length, 40);
   const x = (i: number) => pad.l + (i / (n - 1)) * (w - pad.l - pad.r);
   const top = 0.6, split = pad.t + (h - pad.t - pad.b) * top;
   const yV = (v: number) => pad.t + ((-44 - v) / (-44 + 53)) * (split - pad.t - 6);
-  const yT = (deg: number) => h - pad.b - (deg / 180) * (h - pad.b - split - 6);
+  const yT = (deg: number) => h - pad.b - (deg / round.thetaMax) * (h - pad.b - split - 6);
   const accent = css("--accent"), spike = css("--bad");
   octx.font = "11px ui-sans-serif, system-ui, sans-serif"; octx.textAlign = "right";
   octx.fillStyle = "#8ea3a6";
   for (const v of [-52, -48, -44]) octx.fillText(String(v), pad.l - 6, yV(v) + 4);
-  for (const d of [0, 90, 180]) octx.fillText(`${d}°`, pad.l - 6, yT(d) + 4);
+  const ticks = [0, round.thetaMax / 2, round.thetaMax];
+  for (const d of ticks) octx.fillText(`${d}°`, pad.l - 6, yT(d) + 4);
   octx.strokeStyle = "rgba(255,255,255,.07)"; octx.lineWidth = 1;
   for (const v of [-52, -48]) { octx.beginPath(); octx.moveTo(pad.l, yV(v)); octx.lineTo(w - pad.r, yV(v)); octx.stroke(); }
-  for (const d of [0, 90, 180]) { octx.beginPath(); octx.moveTo(pad.l, yT(d)); octx.lineTo(w - pad.r, yT(d)); octx.stroke(); }
+  for (const d of ticks) { octx.beginPath(); octx.moveTo(pad.l, yT(d)); octx.lineTo(w - pad.r, yT(d)); octx.stroke(); }
   octx.strokeStyle = "#ffd9ec"; octx.lineWidth = 1.2; octx.setLineDash([3, 4]);
   octx.beginPath(); octx.moveTo(pad.l, yV(-45)); octx.lineTo(w - pad.r, yV(-45)); octx.stroke(); octx.setLineDash([]);
   octx.fillStyle = "#ffd9ec"; octx.textAlign = "right"; octx.fillText("threshold -45 mV", w - pad.r, yV(-45) - 5);
 
-  const line = (xs: number[], f: (v: number) => number, color: string, width: number, dash: number[] = [], glow = 0) => {
+  const line = (xs: readonly number[], f: (v: number) => number, color: string, width: number, dash: number[] = [], glow = 0) => {
     octx.save();
     octx.strokeStyle = color; octx.lineWidth = width; octx.setLineDash(dash); octx.lineJoin = "round";
     if (glow) { octx.shadowColor = color; octx.shadowBlur = glow; }
@@ -83,28 +95,28 @@ function drawOverlay(round: Round): void {
     octx.restore();
   };
   // swatter size: filled so the growth reads as a ramp
-  if (round.thetaDeg.length > 1) {
+  if (round.theta.length > 1) {
     octx.beginPath();
-    round.thetaDeg.forEach((v, i) => (i ? octx.lineTo(x(i), yT(v)) : octx.moveTo(x(i), yT(v))));
-    octx.lineTo(x(round.thetaDeg.length - 1), yT(0)); octx.lineTo(x(0), yT(0)); octx.closePath();
+    round.theta.forEach((v, i) => (i ? octx.lineTo(x(i), yT(v)) : octx.moveTo(x(i), yT(v))));
+    octx.lineTo(x(round.theta.length - 1), yT(0)); octx.lineTo(x(0), yT(0)); octx.closePath();
     octx.fillStyle = "rgba(143,165,168,.16)"; octx.fill();
   }
-  line(round.thetaDeg, yT, "#a9bfc2", 2);
-  line(round.gfVoltage.left, yV, accent, 2, [5, 4]);
-  line(round.gfVoltage.right, yV, accent, 2.6, [], 8);
-  const { gf } = round.firstSpikes;
-  if (gf !== null) {
-    const i = gf / CONFIG.tickMs;
+  line(round.theta, yT, "#a9bfc2", 2);
+  line(round.left, yV, accent, 2, [5, 4]);
+  line(round.right, yV, accent, 2.6, [], 8);
+  const { gf } = round;
+  if (gf !== null && gf / CONFIG.tickMs >= round.offset) {
+    const i = gf / CONFIG.tickMs - round.offset;
     octx.strokeStyle = spike; octx.lineWidth = 2; octx.shadowColor = spike; octx.shadowBlur = 10;
     octx.beginPath(); octx.moveTo(x(i), pad.t); octx.lineTo(x(i), h - pad.b); octx.stroke(); octx.shadowBlur = 0;
     octx.fillStyle = spike; octx.font = "600 12px ui-sans-serif, system-ui, sans-serif"; octx.textAlign = "left";
-    const label = `giant fiber spike, ${gf.toFixed(1)} ms`;
+    const label = `${round.spikeLabel}, ${gf.toFixed(1)} ms`;
     const tw = octx.measureText(label).width;
     if (x(i) + 8 + tw > w - pad.r) { octx.textAlign = "right"; octx.fillText(label, x(i) - 8, pad.t + 22); }
     else octx.fillText(label, x(i) + 8, pad.t + 22);
   }
   octx.fillStyle = "#8ea3a6"; octx.font = "11px ui-sans-serif, system-ui, sans-serif"; octx.textAlign = "left";
-  octx.fillText("mV", pad.l + 4, yV(-48) - 5); octx.fillText("swatter size", pad.l + 4, split + 14);
+  octx.fillText("mV", pad.l + 4, yV(-48) - 5); octx.fillText(round.thetaLabel, pad.l + 4, split + 14);
 }
 
 // -------------------------------------------------------------------------------------------- the card
@@ -131,7 +143,8 @@ function showHint(): void {
 // --------------------------------------------------------------------------------------------- the game
 
 async function main(): Promise<void> {
-  const { brain, bin } = await loadBrain();
+  const { brain, bin, another } = await loadBrain();
+  const brainB = await another(); // the swatter's brain in Duel mode: the same circuit, a second instance
   const rules = rulesFor(brain.manifest); // sent with a submission: the server refuses a page running other rules
   const circuit = buildCircuit(brain.manifest, bin, brain.drive);
   const lif = brain.manifest.lif;
@@ -161,8 +174,18 @@ async function main(): Promise<void> {
   let autoTimer: ReturnType<typeof setTimeout> | undefined;
   const params = new URLSearchParams(location.search);
   const demo = params.get("demo");
-  const frozenAfter = !!demo && params.has("after"); // a screenshot of a chosen moment must not drift
+  const frozenAfter = !!demo && params.has("after");
+  const at = params.has("at") ? Number(params.get("at")) : null; // duel demo: freeze this many simulated ms in // a screenshot of a chosen moment must not drift
   const lab = new Lab(brain, { arena, panel: $("labpanel") });
+
+  // Duel: two copies of the brain, no player (see duel.ts and docs/duel.md)
+  let duel: DuelRun | null = null;
+  let duelSeed = Number(params.get("seed") ?? ((Date.now() & 0x7fffffff) >>> 0));
+  let actB = new Activity(circuit);
+  let duelTally = { swatter: 0, fly: 0, early: 0 };
+  let duelSpeed = params.get("speed") ?? "auto";
+  let duelAuto = true;
+  const simB = (d: DuelRun): Sim => ({ engine: d.brainB, lastSpikeMs: d.lastSpikeMs, timeMs: d.timeMs, lastRate: d.lastRate });
 
   // sound: plays back what the engine produced (see sound.ts); a browser only allows it after a click or key press
   const sfx = new Sfx();
@@ -179,8 +202,8 @@ async function main(): Promise<void> {
   if (params.get("eyes") === "1") ($("poppanel").querySelector("details") as HTMLDetailsElement).open = true; // for screenshots
 
   const cursorToMm = (e: PointerEvent) => { const p = stage.pointerToMm(e.clientX, e.clientY); input.x = p.x; input.y = p.y; };
-  sceneCanvas.addEventListener("pointermove", cursorToMm);
-  sceneCanvas.addEventListener("pointerdown", (e) => { cursorToMm(e); input.down = true; sceneCanvas.setPointerCapture(e.pointerId); });
+  sceneCanvas.addEventListener("pointermove", (e) => { if (mode !== "duel") cursorToMm(e); }); // nobody holds the swatter in a duel
+  sceneCanvas.addEventListener("pointerdown", (e) => { if (mode === "duel") return; cursorToMm(e); input.down = true; sceneCanvas.setPointerCapture(e.pointerId); });
   sceneCanvas.addEventListener("pointerup", () => { input.down = false; });
   sceneCanvas.addEventListener("pointercancel", () => { input.down = false; });
   sceneCanvas.addEventListener("contextmenu", (e) => e.preventDefault()); // a long press on touch must charge, not open a menu
@@ -208,18 +231,31 @@ async function main(): Promise<void> {
   }
 
   const LAB_HIDDEN = ["stats", "card", "mode-note", "story", "circuitpanel", "brainpanel", "poppanel", "board"];
+  const DUEL_NOTE = "Duel: nobody is playing. Two copies of the same circuit face each other: the left brain is the fly's, the right brain flies the swatter. "
+    + "The swatter creeps in, steered by whichever of its two eyes fires more, and strikes when its own escape neurons fire.";
   let boardOk = true; // false once the leaderboard server has failed to answer: the static site has none, so the card goes away
   function setMode(m: Mode): void {
     mode = m;
+    document.body.dataset.view = m;
+    clearTimeout(autoTimer);
+    $("brainwrapB").hidden = m !== "duel";
     for (const t of document.querySelectorAll<HTMLElement>("[data-mode]")) t.setAttribute("aria-pressed", String(t.dataset.mode === m));
     const isLab = m === "lab";
     $("labpanel").hidden = !isLab;
-    for (const id of LAB_HIDDEN) $(id).hidden = isLab || (id === "board" && !boardOk);
+    for (const id of LAB_HIDDEN) $(id).hidden = isLab || (id === "board" && (!boardOk || m === "duel"));
     arena.hidden = !isLab; sceneCanvas.hidden = isLab; $("pip").hidden = isLab; $("banner").hidden = true; $("replaying").hidden = true; $("hud-charge").hidden = true;
     $("sub").textContent = isLab
       ? "" // the Lab panel explains itself, and the arena draws its own legend in this corner
-      : "Hover over the fly. Hold the button to charge, release to strike.";
+      : m === "duel" ? "No player: the fly's brain and the swatter's brain play each other." : "Hover over the fly. Hold the button to charge, release to strike.";
     if (isLab) return;
+    if (m === "duel") {
+      duelTally = { swatter: 0, fly: 0, early: 0 };
+      $("submit").innerHTML = "";
+      $("mode-note").textContent = DUEL_NOTE;
+      renderDuelStats();
+      newDuel(false);
+      return;
+    }
     $("stats-rows").innerHTML = m === "classic"
       ? `<div><span class="big" id="n">0 / ${CLASSIC_SWATS}</span><span class="lab">swats</span></div><div><span class="big" id="hits">0</span><span class="lab">hits</span></div>`
       : `<div><span class="big" id="hits">0</span><span class="lab">hits</span></div><div><span class="big" id="n">0 / ${STREAK_LIMIT}</span><span class="lab">swats in a row that did not hit</span></div><div><span class="big" id="best">${store.get("swatter-best-streak") ?? "0"}</span><span class="lab">best</span></div>`;
@@ -244,6 +280,66 @@ async function main(): Promise<void> {
     liveAfter = 0;
     $("banner").hidden = true;
     showHint();
+  }
+
+  // ------------------------------------------------------------------------------------------ duel
+
+  function renderDuelStats(): void {
+    $("stats-rows").innerHTML = `<div><span class="big" id="dw">${duelTally.swatter}</span><span class="lab">caught by the swatter's brain</span></div>`
+      + `<div><span class="big" id="df">${duelTally.fly}</span><span class="lab">fly's brain got away</span></div>`
+      + `<div><span class="big" id="de">${duelTally.early}</span><span class="lab">swatter struck too early</span></div>`;
+  }
+
+  function newDuel(nextSeedFirst: boolean): void {
+    clearTimeout(autoTimer);
+    if (nextSeedFirst) duelSeed = nextSeed(duelSeed);
+    duel = new DuelRun(brain, brainB, duelSeed);
+    activity = new Activity(circuit);
+    actB = new Activity(circuit);
+    round = duel.round;
+    liveAfter = 0; acc = 0;
+    $("banner").hidden = true;
+    renderDuelCard(null);
+  }
+
+  function renderDuelCard(over: string | null): void {
+    const speedSel = (v: string, label: string) => `<option value="${v}"${duelSpeed === v ? " selected" : ""}>${label}</option>`;
+    $("card").innerHTML = (over ? `<div class="detail"><span>${over}</span></div>` : `<div class="note" style="margin:0">Duel in progress. Seed ${duelSeed}.</div>`)
+      + `<div class="actions"><button class="primary" id="dnext">Next duel</button><button id="dagain">Watch this one again</button>`
+      + `<label class="check">Speed <select id="dspeed">${speedSel("auto", "Auto (slows at the decisive moment)")}${speedSel("slow", "0.1x")}${speedSel("real", "1x")}${speedSel("fast", "4x")}</select></label>`
+      + `<label class="check"><input type="checkbox" id="dauto"${duelAuto ? " checked" : ""}> Keep going</label></div>`
+      + (over ? `<div class="note" style="margin:0">Seed ${duelSeed}. A duel is a function of its seed: the same seed plays out the same way.</div>` : "");
+    $("dnext").addEventListener("click", () => newDuel(true));
+    $("dagain").addEventListener("click", () => newDuel(false));
+    $("dspeed").addEventListener("change", (e) => { duelSpeed = (e.target as HTMLSelectElement).value; });
+    $("dauto").addEventListener("change", (e) => { duelAuto = (e.target as HTMLInputElement).checked; if (!duelAuto) clearTimeout(autoTimer); else if (duel?.done) scheduleNextDuel(); });
+  }
+
+  function scheduleNextDuel(): void {
+    clearTimeout(autoTimer);
+    if (duelAuto && !demo) autoTimer = setTimeout(() => newDuel(true), DUEL_PAUSE_MS);
+  }
+
+  /** The line under the stage, and the tally, once a duel is over. */
+  function duelFinished(d: DuelRun): void {
+    const card = d.round.card!;
+    const why = d.strikeReason === "spikes" ? "on its own escape-neuron spike" : d.strikeReason === "arrived" ? "from on top of the fly" : "when it ran out of patience";
+    const line = card.outcome === "hit" ? `The swatter's brain caught the fly: it struck ${why}, ${d.strikeDistMm!.toFixed(0)} mm out.`
+      : card.outcome === "miss" ? `The swatter struck ${why} from ${d.strikeDistMm!.toFixed(0)} mm out, too far to land on the fly.`
+      : card.outcome === "spooked" ? "The fly's brain saw the swatter coming and jumped before it struck."
+      : "The fly's brain jumped as the swatter fell, and got away.";
+    if (card.outcome === "hit") duelTally.swatter++; else if (card.outcome === "miss") duelTally.early++; else duelTally.fly++;
+    renderDuelStats();
+    renderDuelCard(line);
+    scheduleNextDuel();
+  }
+
+  /** Simulated ms per wall ms. Auto: a fast approach, then the last stretch in slow motion so the two brains can be watched deciding. */
+  function duelRate(d: DuelRun): number {
+    if (duelSpeed !== "auto") return DUEL_SPEEDS[duelSpeed] ?? 1;
+    if (d.round.firstSpikes.gf !== null || d.tGf !== null || d.tPar !== null || d.strikeAtMs !== null) return 0.1;
+    const dist = d.distanceMm;
+    return dist > 110 ? 4 : dist > 75 ? 1.5 : 0.35;
   }
 
   function startReplay(): void {
@@ -369,6 +465,19 @@ async function main(): Promise<void> {
     void after;
   }
 
+  function renderCountsB(sb: Sim, act: Activity, d: DuelRun): void {
+    const sum = act.summary(sb);
+    const active = sum.active.lplc2 + sum.active.relay + sum.active.gf + sum.active.parallel;
+    const vNow = d.gfVoltage.right[d.gfVoltage.right.length - 1] ?? lif["v_rst"];
+    const strike = d.strikeAtMs === null ? "creeping in" : "striking";
+    const html = `<div><b class="${sum.total > 0 ? "hot" : ""}">${sum.total}</b>spikes this duel</div>`
+      + `<div><b class="${active > 0 ? "cool" : ""}">${active}<small> of ${circuit.n}</small></b>neurons firing now</div>`
+      + `<div><b>${d.distanceMm.toFixed(0)}<small> mm</small></b>from the fly, ${strike}</div>`
+      + `<div><b>${vNow.toFixed(1)}<small> mV</small></b>giant fiber, spikes at ${lif["v_th"]}</div>`;
+    const el = $("countsB");
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+
   /** What the page currently shows: the live round, or its slow-motion replay. */
   function view(): { r: Round; act: Activity; after: number } {
     return replaying ? { r: replaying.round, act: replaying.act, after: replaying.after } : { r: round, act: activity, after: liveAfter };
@@ -378,7 +487,15 @@ async function main(): Promise<void> {
     const { r, act, after } = view();
     stage.render({ round: r, afterMs: after, crouch: crouchLevel(r), headingSide: headingSide(r), nowMs: now });
     drawCircuit(circuitCanvas, r, circuit, after);
-    drawOverlay(r);
+    if (duel) {
+      const win = 120, from = Math.max(0, r.thetaDeg.length - win); // the last 600 ms: the approach is long and uneventful
+      drawOverlay(overlay, { right: r.gfVoltage.right.slice(from), left: r.gfVoltage.left.slice(from), theta: r.thetaDeg.slice(from), gf: r.firstSpikes.gf, offset: from, thetaLabel: "swatter size", thetaMax: 180, spikeLabel: "giant fiber spike" });
+      const fromB = Math.max(0, duel.thetaDeg.length - win);
+      drawOverlay(overlayB, { right: duel.gfVoltage.right.slice(fromB), left: duel.gfVoltage.left.slice(fromB), theta: duel.thetaDeg.slice(fromB), gf: duel.tGf === null ? duel.tPar : duel.tPar === null ? duel.tGf : Math.min(duel.tGf, duel.tPar), offset: fromB, thetaLabel: "fly size in its eye", thetaMax: 30, spikeLabel: "escape neuron spike" });
+      const sb = simB(duel);
+      drawCircuit(circuitCanvasB, sb, circuit, after);
+      renderCountsB(sb, actB, duel);
+    } else drawOverlay(overlay, { right: r.gfVoltage.right, left: r.gfVoltage.left, theta: r.thetaDeg, gf: r.firstSpikes.gf, offset: 0, thetaLabel: "swatter size", thetaMax: 180, spikeLabel: "giant fiber spike" });
     if ((frameNo & 1) === 0) renderRail(r, act, after);
     const pe = ($("poppanel").querySelector("details") as HTMLDetailsElement);
     if (pe.open) drawPopulation(pop, r);
@@ -392,10 +509,10 @@ async function main(): Promise<void> {
     };
     sfx.play(soundDiff(prevSound, now_));
     prevSound = now_;
-    sfx.setCharge(r.phase === "hover" && !replaying ? r.charge : 0);
+    sfx.setCharge(r.phase === "hover" && !replaying && mode !== "duel" ? r.charge : 0);
 
     const tag = $("hud-charge");
-    if (r.phase === "hover" && r.charge > 0 && !replaying) {
+    if (r.phase === "hover" && r.charge > 0 && !replaying && mode !== "duel") {
       const v = CONFIG.strikeSpeedMin + (CONFIG.strikeSpeedMax - CONFIG.strikeSpeedMin) * r.charge;
       tag.hidden = false;
       tag.textContent = `${v.toFixed(1)} m/s, r/v ${(CONFIG.swatterHalfWidthMm / v).toFixed(0)} ms`;
@@ -408,7 +525,8 @@ async function main(): Promise<void> {
     const showBanner = !!r.card && (!replaying || replaying.round.phase === "done") && (!flew || after >= AIRBORNE_MS);
     banner.hidden = !showBanner;
     if (showBanner) {
-      const [title, ...rest] = resultLine(r.card!.outcome, r.card!.marginMs).split(". ");
+      const line = resultLine(r.card!.outcome, r.card!.marginMs);
+      const [title, ...rest] = (mode === "duel" ? line.replace("before you struck", "before the swatter struck") : line).split(". ");
       const html = `<b>${title}</b><span>${rest.join(". ")}</span>`;
       if (banner.innerHTML !== html) banner.innerHTML = html;
       banner.dataset.outcome = r.card!.outcome;
@@ -421,6 +539,21 @@ async function main(): Promise<void> {
     const wall = Math.min(now - last, 100);
     last = now;
     if (mode === "lab") { lab.frame(now); requestAnimationFrame(frame); return; }
+    if (mode === "duel" && duel) {
+      const d = duel;
+      if (!frozenAfter && !(demo && d.done)) acc += wall * duelRate(d); // a screenshot of a chosen moment must not drift
+      while (!d.done && !(demo && at !== null && d.timeMs >= at) && acc >= CONFIG.tickMs) {
+        acc -= CONFIG.tickMs;
+        d.tick();
+        activity.tick(d.round);
+        actB.tick(simB(d));
+        if (d.done) duelFinished(d);
+      }
+      if (d.done) { acc = 0; if (!frozenAfter) liveAfter = Math.min(AFTER_CAP_MS, liveAfter + wall * AFTER_SPEED); }
+      draw(now);
+      requestAnimationFrame(frame);
+      return;
+    }
     acc += wall;
     if (replaying) {
       while (acc >= REPLAY_MS_PER_TICK && replaying.round.phase !== "done") {
@@ -446,11 +579,19 @@ async function main(): Promise<void> {
   }
   requestAnimationFrame(frame);
   const first = params.get("mode");
-  setMode(first === "lab" || first === "streak" ? first : "classic");
+  setMode(first === "lab" || first === "streak" || first === "classic" ? first : "duel"); // a first visit lands on Duel: nothing to learn before something happens
 
   // Scripted rounds for screenshots and tests: ?demo=hit | escape | spook, or ?mode=lab&demo=lab (a fired loom).
   // Add &after=<ms> to freeze the scene that many simulated ms past the end of the round, e.g. mid-takeoff.
-  if (demo === "lab") { lab.demo(); document.title = "SWATTER demo lab"; }
+  if ((mode as Mode) === "duel" && demo) {
+    // ?mode=duel&demo=1[&seed=N][&at=ms][&after=ms]: run the duel to its end (or to `at`) at once, for screenshots and the browser check
+    const d = duel!;
+    while (!d.done && (at === null || d.timeMs < at)) { d.tick(); activity.tick(d.round); actB.tick(simB(d)); }
+    if (d.done) duelFinished(d);
+    liveAfter = Number(params.get("after") ?? 0);
+    document.title = d.done ? `SWATTER demo duel: ${d.round.card!.outcome}` : "SWATTER demo duel: in progress";
+    (window as unknown as { __swatterDemo: unknown }).__swatterDemo = d.round.card;
+  } else if (demo === "lab") { lab.demo(); document.title = "SWATTER demo lab"; }
   else if (demo) {
     const s = 7, fly = new Round(brain, s).fly, at = { x: fly.x + 20, y: fly.y };
     const tr: Input[] = [];

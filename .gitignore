@@ -21,3 +21,5 @@ dist/
 target/
 web/site/
 server/*.sqlite
+.vercel
+.env*

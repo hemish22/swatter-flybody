@@ -4,6 +4,9 @@
 
 import type { FlyBrain, Manifest } from "../engine/brain.ts";
 import type { Round } from "./world.ts";
+
+/** What the panels read from a simulation: a Round, or the swatter's brain in a duel (which has no Round of its own). */
+export type Sim = Pick<Round, "engine" | "lastSpikeMs" | "timeMs" | "lastRate">;
 import { GROWTH_EPS } from "./story.ts";
 
 export type Kind = "lplc2" | "relay" | "gf" | "parallel";
@@ -93,7 +96,7 @@ export class Activity {
   private circuit: Circuit;
   constructor(circuit: Circuit) { this.circuit = circuit; }
 
-  tick(round: Round): void {
+  tick(round: Sim): void {
     const g = round.lastRate >= GROWTH_EPS;
     if (g && !this.growing) this.growthStarts.push(round.timeMs);
     this.growing = g;
@@ -109,7 +112,7 @@ export class Activity {
     }
   }
 
-  summary(round: Round, windowMs = 20): ActivitySummary {
+  summary(round: Sim, windowMs = 20): ActivitySummary {
     const active: Record<Kind, number> = { lplc2: 0, relay: 0, gf: 0, parallel: 0 };
     for (let j = 0; j < this.circuit.n; j++) if (round.timeMs - round.lastSpikeMs[j] < windowMs) active[this.circuit.kind[j]]++;
     return { total: round.engine.spikeCount, active, first: this.first };
@@ -127,7 +130,7 @@ const rgb = (hex: string, a: number) => {
 const GLOW_MS = 60;
 const EDGE_MS = 45;
 
-export function drawCircuit(canvas: HTMLCanvasElement, round: Round, c: Circuit, afterMs = 0): void {
+export function drawCircuit(canvas: HTMLCanvasElement, round: Sim, c: Circuit, afterMs = 0): void {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const cw = canvas.clientWidth, ch = canvas.clientHeight;
   if (cw === 0 || ch === 0) return;

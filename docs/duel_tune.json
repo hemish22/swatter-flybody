@@ -1,0 +1,95 @@
+{
+ "fitSeeds": 32,
+ "checkSeeds": 64,
+ "best": {
+  "gainB": 3,
+  "creepMmPerMs": 0.035,
+  "startMm": 160
+ },
+ "fit": {
+  "hit": 0.40625,
+  "bySpikes": 0.34375,
+  "fly": 0.4375,
+  "miss": 0.15625
+ },
+ "check": {
+  "hit": 0.390625,
+  "bySpikes": 0.25,
+  "fly": 0.5,
+  "miss": 0.109375
+ },
+ "top": [
+  {
+   "gainB": 3,
+   "creepMmPerMs": 0.035,
+   "hit": 0.40625,
+   "bySpikes": 0.34375,
+   "fly": 0.4375,
+   "miss": 0.15625,
+   "score": 0.01
+  },
+  {
+   "gainB": 3.25,
+   "creepMmPerMs": 0.035,
+   "hit": 0.28125,
+   "bySpikes": 0.28125,
+   "fly": 0.375,
+   "miss": 0.34375,
+   "score": 0.035
+  },
+  {
+   "gainB": 2.75,
+   "creepMmPerMs": 0.04,
+   "hit": 0.375,
+   "bySpikes": 0.375,
+   "fly": 0.59375,
+   "miss": 0.03125,
+   "score": 0.067
+  },
+  {
+   "gainB": 2.5,
+   "creepMmPerMs": 0.045,
+   "hit": 0.3125,
+   "bySpikes": 0.3125,
+   "fly": 0.625,
+   "miss": 0.0625,
+   "score": 0.077
+  },
+  {
+   "gainB": 2.75,
+   "creepMmPerMs": 0.035,
+   "hit": 0.53125,
+   "bySpikes": 0.3125,
+   "fly": 0.46875,
+   "miss": 0,
+   "score": 0.1
+  },
+  {
+   "gainB": 2.25,
+   "creepMmPerMs": 0.05,
+   "hit": 0.3125,
+   "bySpikes": 0.3125,
+   "fly": 0.65625,
+   "miss": 0.03125,
+   "score": 0.102
+  },
+  {
+   "gainB": 2.5,
+   "creepMmPerMs": 0.05,
+   "hit": 0.21875,
+   "bySpikes": 0.21875,
+   "fly": 0.65625,
+   "miss": 0.125,
+   "score": 0.104
+  },
+  {
+   "gainB": 2.5,
+   "creepMmPerMs": 0.04,
+   "hit": 0.34375,
+   "bySpikes": 0.3125,
+   "fly": 0.65625,
+   "miss": 0,
+   "score": 0.114
+  }
+ ]
+}

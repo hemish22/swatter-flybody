@@ -30,6 +30,16 @@
   .hero { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
   .hero > * { min-width: 0; }
   @media (max-width: 980px) { .hero { grid-template-columns: minmax(0, 1fr); } }
+  /* Duel: the wide stage on top, the two brains side by side underneath */
+  body[data-view="duel"] .hero { grid-template-areas: "stage stage" "a b" "under under"; }
+  body[data-view="duel"] .stage { grid-area: stage; min-height: 0; height: clamp(300px, 30vw, 440px); }
+  body[data-view="duel"] #brainwrap { grid-area: a; }
+  body[data-view="duel"] #brainwrapB { grid-area: b; }
+  body[data-view="duel"] .under { grid-area: under; }
+  @media (max-width: 980px) {
+    body[data-view="duel"] .hero { grid-template-areas: "stage" "a" "b" "under"; }
+    body[data-view="duel"] .stage { height: auto; aspect-ratio: 4 / 3; }
+  }
 
   /* the table and the brain are the same size: same width, and the table stretches to the brain panel's height */
   .stage { position: relative; min-height: 520px; height: 100%; border-radius: 14px; overflow: hidden; background: #070d10; border: 1px solid #2a4a50; }
@@ -74,7 +84,7 @@
   .brainhead .key { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
   .brainhead .key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
   .brainview { position: relative; flex: 1 1 auto; min-height: 300px; }
-  #circuit { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #circuit, #circuitB { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .hud { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 10px 16px 0; border: 1px solid rgba(79,227,209,.2); border-radius: 10px; background: rgba(8,16,19,.9); overflow: hidden; }
   .hud div { padding: 8px 14px; border-left: 1px solid rgba(79,227,209,.14); } .hud div:first-child { border-left: 0; }
   @media (max-width: 560px) { .hud { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -88,7 +98,7 @@
   .strip .row { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
   .strip .row b { color: var(--ink); font-size: 13px; }
   .strip .row .legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; margin-right: 6px; vertical-align: 3px; }
-  #overlay { width: 100%; height: 138px; display: block; }
+  #overlay, #overlayB { width: 100%; height: 138px; display: block; }
   .brainwrap .note { margin: 0; padding: 0 16px 10px; background: #070d10; }
 
   /* ---- the four-step account, as a strip */
@@ -137,6 +147,7 @@
     <button data-mode="classic" aria-pressed="true">Classic</button>
     <button data-mode="streak" aria-pressed="false">Streak</button>
     <button data-mode="lab" aria-pressed="false">Lab</button>
+    <button data-mode="duel" aria-pressed="false" title="Two copies of the fly's brain play each other">Duel</button>
   </nav>
   <button id="sound" class="soundbtn" aria-pressed="true" title="Sound on or off">Sound on</button>
 </header>
@@ -155,7 +166,7 @@
       <div id="labpanel" hidden></div>
       <section id="circuitpanel" style="display:flex;flex-direction:column;flex:1 1 auto">
         <div class="brainhead">
-          <h2>The fly's brain, live</h2>
+          <h2 id="brainAtitle">The fly's brain, live</h2>
           <span class="sub">495 neurons from the connectome. Each dot is a neuron; a flash is a spike.</span>
           <span class="key"><span><i style="background:#f0a95b"></i>looming detector</span><span><i style="background:#4fe3d1"></i>relay</span><span><i style="background:#ff4fa3"></i>spike</span></span>
         </div>
@@ -169,6 +180,24 @@
           <canvas id="overlay" aria-label="Giant fiber membrane voltage and swatter angular size over time"></canvas>
         </div>
         <div class="note">The layout is a diagram, not anatomy: right-leaning relays sit at the top, left-leaning at the bottom. The connections and the activity are the engine's own.</div>
+      </section>
+    </div>
+    <div class="brainwrap" id="brainwrapB" hidden>
+      <section style="display:flex;flex-direction:column;flex:1 1 auto">
+        <div class="brainhead">
+          <h2>The swatter's brain, live</h2>
+          <span class="sub">A second copy of the same 495 neurons, flying the swatter.</span>
+          <span class="key"><span><i style="background:#f0a95b"></i>looming detector</span><span><i style="background:#4fe3d1"></i>relay</span><span><i style="background:#ff4fa3"></i>spike</span></span>
+        </div>
+        <div class="hud" id="countsB"></div>
+        <div class="brainview">
+          <canvas id="circuitB" aria-label="Diagram of the swatter's copy of the circuit with live spikes"></canvas>
+        </div>
+        <div class="strip">
+          <div class="row"><b>Giant fiber voltage</b><span>the swatter strikes when its escape neurons fire; the giant fiber is the fastest of them</span></div>
+          <canvas id="overlayB" aria-label="The swatter brain's giant fiber voltage and the fly's angular size in its eye over time"></canvas>
+        </div>
+        <div class="note">Only the wiring is real. What this brain sees (two forward-facing eyes, the fly as a looming disc), how its activity becomes motion (a steady creep, turning toward the eye that fires more) and its sensitivity are our mapping, not biology.</div>
       </section>
     </div>
     <div class="under">
