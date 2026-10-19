@@ -17,6 +17,8 @@ Move the mouse to hover the swatter over the fly. **Hold the button to charge** 
 swing**. A fly reacts within about 10 to 25 ms of the swatter starting to grow, so a hit needs a full charge and a slow,
 quiet approach. A fast mouse spooks it before you strike. Classic is 20 swats scored by hits; Streak ends after three
 misses in a row; Lab lets you fire the standard loom stimuli at a tethered fly and plot the response.
+**Duel** has no player: a second copy of the same circuit flies the swatter against the fly's brain, and you watch both brains
+decide ([`docs/duel.md`](docs/duel.md)).
 
 ## What it is made of
 
@@ -65,7 +67,7 @@ or build the static site and serve `web/site` with any file server:
 npm run build:site
 ```
 
-Checks: `npx tsc -p .` and `npm test` (38 tests, Node 24 or later); `./browser_check.sh` runs the in-browser parity set and
+Checks: `npx tsc -p .` and `npm test` (44 tests, Node 24 or later); `./browser_check.sh` runs the in-browser parity set and
 scripted rounds in headless Chrome. The Python side needs a GPU and the 1 GB connectome download, and is run on a server:
 see [`docs/dev-notes.md`](docs/dev-notes.md) and `scripts/dgx.sh`.
 
